@@ -1,1 +1,226 @@
-index.html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>gama-fitness– Gestão de Academia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#ef172a;--sf:#1e293b;--ink:#14202b;--mut:#94a3b8;--ln:#334155;--ac:#f97316;--acx:#fff;--ok:#12805c;--okb:#dcf3ea;--wr:#9a5b00;--wrb:#fdebc8;--er:#b42318;--erb:#fde0dd;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f161d;--sf:#18222c;--ink:#e8eef4;--mut:#93a1ae;--ln:#2a3744;--ac:#5b8cff;--acx:#0b1220;--ok:#4cd3a0;--okb:#12352b;--wr:#f2b84b;--wrb:#3a2d10;--er:#ff8a7e;--erb:#3d1a17}}
+:root[data-theme="dark"]{--bg:#0f161d;--sf:#18222c;--ink:#e8eef4;--mut:#93a1ae;--ln:#2a3744;--ac:#5b8cff;--acx:#0b1220;--ok:#4cd3a0;--okb:#12352b;--wr:#f2b84b;--wrb:#3a2d10;--er:#ff8a7e;--erb:#3d1a17}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 Archivo,system-ui,sans-serif;display:flex;min-height:100vh}
+nav{width:220px;background:var(--sf);border-right:1px solid var(--ln);padding:20px 12px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.logo{font-weight:800;font-size:22px;padding:0 10px 16px;letter-spacing:-.5px}.logo b{color:var(--ac)}
+nav a{display:block;padding:10px 12px;border-radius:8px;color:var(--mut);text-decoration:none;font-weight:600}
+nav a:hover{background:var(--bg)}nav a.on{background:var(--ac);color:var(--acx)}
+nav .sp{flex:1}
+main{flex:1;min-width:0;padding:28px clamp(16px,3vw,40px);max-width:1100px}
+h1{font-size:28px;font-weight:800;margin:0 0 4px;letter-spacing:-.5px}h2{font-size:17px;margin:0 0 12px}
+.sub{color:var(--mut);margin:0 0 22px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px}
+.box{background:var(--sf);border:1px solid var(--ln);border-radius:12px;padding:18px}
+.kpi small{color:var(--mut);display:block}.kpi strong{font-size:30px;font-weight:800;letter-spacing:-1px}
+.row2{display:grid;grid-template-columns:1.2fr 1fr;gap:14px}
+@media(max-width:820px){body{flex-direction:column}nav{width:100%;height:auto;position:sticky;flex-direction:row;overflow-x:auto;padding:10px;border-right:0;border-bottom:1px solid var(--ln);z-index:5}.logo,.sp{display:none}nav a{white-space:nowrap}.row2{grid-template-columns:1fr}}
+.bars{display:flex;align-items:flex-end;gap:10px;height:150px}
+.bars div{flex:1;text-align:center;font-size:12px;color:var(--mut);display:flex;flex-direction:column;justify-content:flex-end;height:100%}
+.bars i{display:block;background:var(--ac);border-radius:6px 6px 0 0;min-height:3px}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--ln);white-space:nowrap}th{color:var(--mut);font-weight:600;font-size:13px}
+tr:last-child td{border-bottom:0}
+.tag{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:600}
+.ok{background:var(--okb);color:var(--ok)}.vence{background:var(--wrb);color:var(--wr)}.atrasado{background:var(--erb);color:var(--er)}
+button,input,select,textarea{font:inherit;color:inherit}
+input,select,textarea{background:var(--bg);border:1px solid var(--ln);border-radius:8px;padding:9px 12px;width:100%}
+input:focus,select:focus,button:focus-visible,a:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
+.btn{background:var(--ac);color:var(--acx);border:0;border-radius:8px;padding:9px 16px;font-weight:600;cursor:pointer}
+.btn.g{background:transparent;color:var(--ink);border:1px solid var(--ln)}.btn.s{padding:5px 10px;font-size:13px}.btn.d{color:var(--er)}
+.bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}.bar input{flex:1;min-width:180px}
+dialog{border:1px solid var(--ln);border-radius:14px;background:var(--sf);color:var(--ink);padding:22px;width:min(420px,92vw)}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
+.ci{text-align:center;padding:32px 20px}.ci input{font-size:22px;text-align:center;max-width:420px;margin:12px auto}
+.res{margin:18px auto 0;max-width:420px;padding:18px;border-radius:12px;font-weight:600}
+.res.ok{background:var(--okb);color:var(--ok)}.res.atrasado{background:var(--erb);color:var(--er)}.res big{display:block;font-size:20px}
+.cls{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.cls h3{margin:0}.cls p{margin:2px 0 10px;color:var(--mut)}
+.meter{height:6px;background:var(--bg);border-radius:9px;overflow:hidden;margin-bottom:10px}.meter i{display:block;height:100%;background:var(--ac)}
+.empty{color:var(--mut);padding:18px;text-align:center}
+.ac{display:flex;gap:6px}
+#toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:99px;opacity:0;transition:opacity .2s;pointer-events:none}
+#toast.on{opacity:1}
+a.btn{text-decoration:none;display:inline-block}.wa{background:#1a7f47;color:#fff}
+.qr{background:#fff;padding:8px;border-radius:10px;width:210px;margin:0 auto 12px}.qr svg{width:100%;height:auto;display:block}
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main id="v"></main>
+<dialog id="dlg"></dialog>
+<div id="toast" role="status"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+var K='irongest_v1',S=null;
+try{S=JSON.parse(localStorage.getItem(K))}catch(e){}
+var iso=function(d){return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
+var hoje=function(){return iso(new Date())};
+var addD=function(s,n){var d=new Date(s+'T12:00:00');d.setDate(d.getDate()+n);return iso(d)};
+var addM=function(s,n){var d=new Date(s+'T12:00:00');d.setMonth(d.getMonth()+n);return iso(d)};
+var fd=function(s){return s?s.split('-').reverse().join('/'):'–'};
+var R=function(n){return 'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})};
+var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+var uid=function(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5)};
+function seed(){
+ var h=hoje(),p=[{id:'p1',nome:'Mensal',preco:99,meses:1},{id:'p2',nome:'Trimestral',preco:270,meses:3},{id:'p3',nome:'Anual',preco:960,meses:12}];
+ var n=[['Ana Beatriz Lima','(87) 99911-2233','p1',12],['Carlos Eduardo Souza','(87) 99822-4455','p2',40],['Fernanda Alves','(87) 99733-6677','p1',3],['João Pedro Matos','(87) 99644-8899','p3',200],['Marina Costa','(87) 99555-0011','p1',-6],['Rafael Nogueira','(87) 99466-1122','p1',-14]];
+ var al=n.map(function(x,i){return{id:'a'+(i+1),nome:x[0],tel:x[1],plano:x[2],venc:addD(h,x[3]),treino:[]}});
+ al[0].treino=[{ex:'Agachamento livre',sr:'4x10'},{ex:'Supino reto',sr:'4x8'},{ex:'Remada curvada',sr:'3x12'}];
+ var ci=[];for(var d=0;d<7;d++)for(var k=0;k<4+((d*5)%7);k++)ci.push({aluno:al[(d+k)%4].id,dia:addD(h,-d),hora:'0'+(6+k)+':'+(10+k*7)});
+ var au=[['Spinning','Seg',' 07:00',20],['Funcional','Ter','18:30',16],['Yoga','Qua','19:00',12],['Muay Thai','Qui','20:00',15],['Jiu-Jitsu','Sex','19:00',14]].map(function(x,i){return{id:'c'+i,nome:x[0],dia:x[1],hora:x[2].trim(),vagas:x[3],ins:i<2?['a1','a2']:[]}});
+ var pg=[{aluno:'a1',valor:99,data:addD(h,-18)},{aluno:'a2',valor:270,data:addD(h,-50)},{aluno:'a4',valor:960,data:addD(h,-165)},{aluno:'a3',valor:99,data:addD(h,-27)}];
+ return{planos:p,alunos:al,checkins:ci,aulas:au,pagamentos:pg}
+}
+if(!S||!S.alunos)S=seed();
+if(!S.cfg)S.cfg={nome:'Minha Academia',pix:'',cidade:''};
+function save(){try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}}
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.className='on';clearTimeout(toast.t);toast.t=setTimeout(function(){t.className=''},2200)}
+function st(a){var h=hoje();return a.venc<h?'atrasado':(a.venc<=addD(h,5)?'vence':'ok')}
+var STL={ok:'Em dia',vence:'Vence em breve',atrasado:'Inadimplente'};
+function tag(a){var s=st(a);return '<span class="tag '+s+'">'+STL[s]+'</span>'}
+var plano=function(id){return S.planos.filter(function(p){return p.id===id})[0]||{nome:'–',preco:0,meses:1}};
+var aluno=function(id){return S.alunos.filter(function(a){return a.id===id})[0]};
+var $=function(i){return document.getElementById(i)};
+var dlg=$('dlg');
+function open(html){dlg.innerHTML=html;dlg.showModal()}
+
+var ROTAS=[['painel','Painel'],['alunos','Alunos'],['checkin','Check-in'],['aulas','Aulas'],['treinos','Treinos'],['financeiro','Financeiro'],['planos','Planos'],['config','Configurações']];
+function nav(r){$('nav').innerHTML='<div class="logo">gama<b>fitness</b></div>'+ROTAS.map(function(x){return '<a href="#'+x[0]+'" class="'+(x[0]===r?'on':'')+'">'+x[1]+'</a>'}).join('')+'<div class="sp"></div><a href="#" onclick="return tema()">Alternar tema</a>'}
+function tema(){var r=document.documentElement,d=r.getAttribute('data-theme')==='dark'||(!r.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme:dark)').matches);r.setAttribute('data-theme',d?'light':'dark');return false}
+
+var V={};
+V.painel=function(){
+ var h=hoje(),mes=h.slice(0,7),at=S.alunos.filter(function(a){return st(a)!=='atrasado'}).length,
+ inad=S.alunos.filter(function(a){return st(a)==='atrasado'}).length,
+ rec=S.pagamentos.filter(function(p){return p.data.slice(0,7)===mes}).reduce(function(s,p){return s+p.valor},0),
+ hj=S.checkins.filter(function(c){return c.dia===h}).length,
+ dias=[0,1,2,3,4,5,6].map(function(i){var d=addD(h,i-6);return{d:d,n:S.checkins.filter(function(c){return c.dia===d}).length}}),
+ mx=Math.max.apply(null,dias.map(function(x){return x.n}).concat([1])),
+ sem=['dom','seg','ter','qua','qui','sex','sáb'],
+ prox=S.alunos.filter(function(a){return st(a)!=='ok'}).sort(function(a,b){return a.venc<b.venc?-1:1});
+ return '<h1>Painel</h1><p class="sub">Resumo de hoje, '+fd(h)+'</p>'+
+ '<div class="grid"><div class="box kpi"><small>Alunos ativos</small><strong>'+at+'</strong></div><div class="box kpi"><small>Receita do mês</small><strong>'+R(rec)+'</strong></div><div class="box kpi"><small>Inadimplentes</small><strong>'+inad+'</strong></div><div class="box kpi"><small>Check-ins hoje</small><strong>'+hj+'</strong></div></div>'+
+ '<div class="row2"><div class="box"><h2>Frequência dos últimos 7 dias</h2><div class="bars">'+dias.map(function(x){return '<div><span>'+x.n+'</span><i style="height:'+(x.n/mx*100)+'%"></i>'+sem[new Date(x.d+'T12:00:00').getDay()]+'</div>'}).join('')+'</div></div>'+
+ '<div class="box"><h2>Cobranças pendentes</h2>'+(prox.length?'<div class="tw"><table>'+prox.map(function(a){return '<tr><td>'+esc(a.nome)+'</td><td>'+fd(a.venc)+'</td><td>'+tag(a)+'</td><td><a class="btn s wa" target="_blank" rel="noopener" href="'+zapLink(a)+'">Cobrar</a></td></tr>'}).join('')+'</table></div>':'<p class="empty">Nenhuma cobrança pendente.</p>')+'</div></div>'
+};
+V.alunos=function(){
+ return '<h1>Alunos</h1><p class="sub">Cadastro, planos e situação das mensalidades.</p><div class="bar"><input id="q" placeholder="Buscar por nome ou telefone" oninput="listaAlunos()"><button class="btn" onclick="formAluno()">Novo aluno</button></div><div class="box tw" id="tb"></div>'
+};
+function listaAlunos(){
+ var q=($('q')||{value:''}).value.toLowerCase(),l=S.alunos.filter(function(a){return (a.nome+a.tel).toLowerCase().indexOf(q)>-1});
+ $('tb').innerHTML=l.length?'<table><tr><th>Nome</th><th>Telefone</th><th>Plano</th><th>Vencimento</th><th>Situação</th><th></th></tr>'+l.map(function(a){return '<tr><td>'+esc(a.nome)+'</td><td>'+esc(a.tel)+'</td><td>'+esc(plano(a.plano).nome)+'</td><td>'+fd(a.venc)+'</td><td>'+tag(a)+'</td><td class="ac"><button class="btn s" onclick="cobrar(\''+a.id+'\')">Cobrar Pix</button><a class="btn s wa" target="_blank" rel="noopener" href="'+zapLink(a)+'">WhatsApp</a><button class="btn s g" onclick="formAluno(\''+a.id+'\')">Editar</button><button class="btn s g d" onclick="delAluno(\''+a.id+'\')">Excluir</button></td></tr>'}).join('')+'</table>':'<p class="empty">Nenhum aluno encontrado. Clique em “Novo aluno” para cadastrar.</p>'
+}
+function formAluno(id){
+ var a=id?aluno(id):{nome:'',tel:'',plano:S.planos[0]&&S.planos[0].id,venc:hoje()};
+ if(!S.planos.length){toast('Cadastre um plano antes de adicionar alunos');return}
+ open('<h2>'+(id?'Editar aluno':'Novo aluno')+'</h2><label>Nome completo</label><input id="fn" value="'+esc(a.nome)+'"><label>Telefone</label><input id="ft" value="'+esc(a.tel)+'" placeholder="(00) 00000-0000"><label>Plano</label><select id="fp">'+S.planos.map(function(p){return '<option value="'+p.id+'"'+(p.id===a.plano?' selected':'')+'>'+esc(p.nome)+' – '+R(p.preco)+'</option>'}).join('')+'</select><label>Próximo vencimento</label><input type="date" id="fv" value="'+a.venc+'"><div class="bar" style="margin-top:18px;justify-content:flex-end"><button class="btn g" onclick="dlg.close()">Cancelar</button><button class="btn" onclick="salvaAluno(\''+(id||'')+'\')">Salvar aluno</button></div>')
+}
+function salvaAluno(id){
+ var n=$('fn').value.trim();if(!n){toast('Informe o nome do aluno');return}
+ var d={nome:n,tel:$('ft').value.trim(),plano:$('fp').value,venc:$('fv').value||hoje()};
+ if(id){Object.assign(aluno(id),d)}else{d.id=uid();d.treino=[];S.alunos.push(d)}
+ save();dlg.close();toast('Aluno salvo');go()
+}
+function delAluno(id){if(!confirm('Excluir este aluno e seu histórico?'))return;S.alunos=S.alunos.filter(function(a){return a.id!==id});S.checkins=S.checkins.filter(function(c){return c.aluno!==id});S.pagamentos=S.pagamentos.filter(function(c){return c.aluno!==id});S.aulas.forEach(function(c){c.ins=c.ins.filter(function(x){return x!==id})});save();toast('Aluno excluído');go()}
+function receber(id){
+ var a=aluno(id),p=plano(a.plano),base=a.venc>hoje()?a.venc:hoje();
+ S.pagamentos.push({aluno:id,valor:p.preco,data:hoje()});a.venc=addM(base,p.meses);save();toast('Pagamento de '+R(p.preco)+' recebido');go()
+}
+V.checkin=function(){
+ var h=hoje(),l=S.checkins.filter(function(c){return c.dia===h}).reverse();
+ return '<h1>Check-in</h1><p class="sub">Registre a entrada do aluno pelo nome ou código.</p><div class="box ci"><h2>Quem está chegando?</h2><input id="cq" placeholder="Nome do aluno" list="dl" autocomplete="off" onkeydown="if(event.key===\'Enter\')fazCheckin()"><datalist id="dl">'+S.alunos.map(function(a){return '<option value="'+esc(a.nome)+'">'}).join('')+'</datalist><br><button class="btn" onclick="fazCheckin()">Liberar acesso</button><div id="rs"></div></div><div class="box tw" style="margin-top:14px"><h2>Entradas de hoje</h2>'+(l.length?'<table>'+l.map(function(c){var a=aluno(c.aluno);return '<tr><td>'+c.hora+'</td><td>'+esc(a?a.nome:'Removido')+'</td></tr>'}).join('')+'</table>':'<p class="empty">Nenhuma entrada registrada hoje.</p>')+'</div>'
+};
+function fazCheckin(){
+ var q=$('cq').value.trim().toLowerCase(),r=$('rs');if(!q)return;
+ var m=S.alunos.filter(function(a){return a.nome.toLowerCase().indexOf(q)>-1});
+ if(m.length!==1){r.innerHTML='<div class="res atrasado">'+(m.length?'Mais de um aluno encontrado. Digite o nome completo.':'Aluno não encontrado. Confira o nome.')+'</div>';return}
+ var a=m[0];
+ if(st(a)==='atrasado'){r.innerHTML='<div class="res atrasado"><big>Acesso bloqueado</big>Mensalidade vencida em '+fd(a.venc)+'. Receba o pagamento em Alunos.</div>';return}
+ var d=new Date(),hh=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+ S.checkins.push({aluno:a.id,dia:hoje(),hora:hh});save();
+ r.innerHTML='<div class="res ok"><big>Acesso liberado</big>'+esc(a.nome)+' · '+hh+(st(a)==='vence'?'<br>Atenção: vence em '+fd(a.venc):'')+'</div>';
+ setTimeout(go,1800)
+}
+V.aulas=function(){
+ return '<h1>Aulas</h1><p class="sub">Grade semanal e reservas de vagas.</p><div class="bar"><button class="btn" onclick="formAula()">Nova aula</button></div><div class="cls">'+(S.aulas.length?S.aulas.map(function(c){var p=c.ins.length/c.vagas*100;return '<div class="box"><h3>'+esc(c.nome)+'</h3><p>'+esc(c.dia)+' às '+esc(c.hora)+'</p><div class="meter"><i style="width:'+p+'%"></i></div><small>'+c.ins.length+' de '+c.vagas+' vagas ocupadas</small><div class="ac" style="margin-top:10px"><button class="btn s" onclick="reservar(\''+c.id+'\')">Reservar</button><button class="btn s g d" onclick="delAula(\''+c.id+'\')">Excluir</button></div></div>'}).join(''):'<p class="empty">Nenhuma aula cadastrada.</p>')+'</div>'
+};
+function formAula(){open('<h2>Nova aula</h2><label>Nome da aula</label><input id="an"><label>Dia da semana</label><select id="ad"><option>Seg</option><option>Ter</option><option>Qua</option><option>Qui</option><option>Sex</option><option>Sáb</option></select><label>Horário</label><input type="time" id="ah" value="18:00"><label>Vagas</label><input type="number" id="av" value="15" min="1"><div class="bar" style="margin-top:18px;justify-content:flex-end"><button class="btn g" onclick="dlg.close()">Cancelar</button><button class="btn" onclick="salvaAula()">Salvar aula</button></div>')}
+function salvaAula(){var n=$('an').value.trim();if(!n){toast('Informe o nome da aula');return}S.aulas.push({id:uid(),nome:n,dia:$('ad').value,hora:$('ah').value,vagas:+$('av').value||10,ins:[]});save();dlg.close();toast('Aula criada');go()}
+function delAula(id){S.aulas=S.aulas.filter(function(c){return c.id!==id});save();go()}
+function reservar(id){
+ var c=S.aulas.filter(function(x){return x.id===id})[0];
+ open('<h2>Reservar em '+esc(c.nome)+'</h2><label>Aluno</label><select id="ra">'+S.alunos.filter(function(a){return c.ins.indexOf(a.id)<0}).map(function(a){return '<option value="'+a.id+'">'+esc(a.nome)+'</option>'}).join('')+'</select><div class="bar" style="margin-top:18px;justify-content:flex-end"><button class="btn g" onclick="dlg.close()">Cancelar</button><button class="btn" onclick="confReserva(\''+id+'\')">Confirmar reserva</button></div>')
+}
+function confReserva(id){var c=S.aulas.filter(function(x){return x.id===id})[0],a=$('ra').value;if(!a)return;if(c.ins.length>=c.vagas){toast('Aula lotada');return}c.ins.push(a);save();dlg.close();toast('Reserva confirmada');go()}
+var TA=null;
+V.treinos=function(){
+ if(!TA||!aluno(TA))TA=S.alunos[0]&&S.alunos[0].id;
+ var a=aluno(TA);
+ return '<h1>Treinos</h1><p class="sub">Monte a ficha de exercícios de cada aluno.</p>'+(a?'<div class="bar"><select id="ta" onchange="TA=this.value;go()">'+S.alunos.map(function(x){return '<option value="'+x.id+'"'+(x.id===TA?' selected':'')+'>'+esc(x.nome)+'</option>'}).join('')+'</select></div><div class="box tw">'+(a.treino&&a.treino.length?'<table><tr><th>Exercício</th><th>Séries x repetições</th><th></th></tr>'+a.treino.map(function(t,i){return '<tr><td>'+esc(t.ex)+'</td><td>'+esc(t.sr)+'</td><td><button class="btn s g d" onclick="delEx('+i+')">Remover</button></td></tr>'}).join('')+'</table>':'<p class="empty">Esta ficha está vazia. Adicione o primeiro exercício abaixo.</p>')+'</div><div class="bar" style="margin-top:14px"><input id="ex" placeholder="Exercício (ex.: Leg press)"><input id="sr" placeholder="Séries x reps (ex.: 3x12)" style="max-width:200px"><button class="btn" onclick="addEx()">Adicionar exercício</button></div>':'<p class="empty">Cadastre um aluno para montar uma ficha.</p>')
+};
+function addEx(){var e=$('ex').value.trim();if(!e){toast('Informe o exercício');return}var a=aluno(TA);a.treino=a.treino||[];a.treino.push({ex:e,sr:$('sr').value.trim()||'3x12'});save();go()}
+function delEx(i){aluno(TA).treino.splice(i,1);save();go()}
+V.financeiro=function(){
+ var mes=hoje().slice(0,7),pm=S.pagamentos.filter(function(p){return p.data.slice(0,7)===mes}).reduce(function(s,p){return s+p.valor},0),
+ aberto=S.alunos.filter(function(a){return st(a)==='atrasado'}).reduce(function(s,a){return s+plano(a.plano).preco},0),
+ tot=S.pagamentos.reduce(function(s,p){return s+p.valor},0),l=S.pagamentos.slice().reverse();
+ return '<h1>Financeiro</h1><p class="sub">Entradas e valores em aberto.</p><div class="grid"><div class="box kpi"><small>Recebido neste mês</small><strong>'+R(pm)+'</strong></div><div class="box kpi"><small>Em aberto (inadimplência)</small><strong>'+R(aberto)+'</strong></div><div class="box kpi"><small>Total recebido</small><strong>'+R(tot)+'</strong></div></div><div class="box tw"><h2>Pagamentos recebidos</h2>'+(l.length?'<table><tr><th>Data</th><th>Aluno</th><th>Valor</th></tr>'+l.map(function(p){var a=aluno(p.aluno);return '<tr><td>'+fd(p.data)+'</td><td>'+esc(a?a.nome:'Removido')+'</td><td>'+R(p.valor)+'</td></tr>'}).join('')+'</table>':'<p class="empty">Nenhum pagamento registrado. Use “Receber” na lista de alunos.</p>')+'</div>'
+};
+V.planos=function(){
+ return '<h1>Planos</h1><p class="sub">Valores e duração das mensalidades.</p><div class="bar"><button class="btn" onclick="formPlano()">Novo plano</button></div><div class="grid">'+S.planos.map(function(p){var n=S.alunos.filter(function(a){return a.plano===p.id}).length;return '<div class="box kpi"><small>'+esc(p.nome)+' · '+p.meses+(p.meses>1?' meses':' mês')+'</small><strong>'+R(p.preco)+'</strong><p class="sub" style="margin:6px 0 10px">'+n+(n===1?' aluno':' alunos')+'</p><button class="btn s g d" onclick="delPlano(\''+p.id+'\')">Excluir</button></div>'}).join('')+'</div>'
+};
+function formPlano(){open('<h2>Novo plano</h2><label>Nome</label><input id="pn"><label>Preço (R$)</label><input type="number" id="pp" step="0.01" min="0"><label>Duração em meses</label><input type="number" id="pm" value="1" min="1"><div class="bar" style="margin-top:18px;justify-content:flex-end"><button class="btn g" onclick="dlg.close()">Cancelar</button><button class="btn" onclick="salvaPlano()">Salvar plano</button></div>')}
+function salvaPlano(){var n=$('pn').value.trim();if(!n||!$('pp').value){toast('Informe nome e preço');return}S.planos.push({id:uid(),nome:n,preco:+$('pp').value,meses:+$('pm').value||1});save();dlg.close();toast('Plano criado');go()}
+function delPlano(id){if(S.alunos.some(function(a){return a.plano===id})){toast('Há alunos neste plano. Troque o plano deles primeiro.');return}S.planos=S.planos.filter(function(p){return p.id!==id});save();go()}
+
+var semAc=function(s){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'')};
+function tlv(i,v){return i+('0'+v.length).slice(-2)+v}
+function crc16(s){var c=65535,i,j;for(i=0;i<s.length;i++){c^=s.charCodeAt(i)<<8;for(j=0;j<8;j++)c=(c&32768)?((c<<1)^4129):(c<<1);c&=65535}return('000'+c.toString(16).toUpperCase()).slice(-4)}
+function pixCode(v,tx){
+ var c=S.cfg;if(!c.pix||!c.cidade)return'';
+ var nome=semAc(c.nome).toUpperCase().replace(/[^A-Z0-9 ]/g,'').slice(0,25)||'ACADEMIA',cid=semAc(c.cidade).toUpperCase().replace(/[^A-Z0-9 ]/g,'').slice(0,15)||'BRASIL';
+ var p=tlv('00','01')+tlv('01','11')+tlv('26',tlv('00','br.gov.bcb.pix')+tlv('01',c.pix.trim()))+tlv('52','0000')+tlv('53','986')+tlv('54',v.toFixed(2))+tlv('58','BR')+tlv('59',nome)+tlv('60',cid)+tlv('62',tlv('05',tx))+'6304';
+ return p+crc16(p)
+}
+function qrSvg(t){try{var q=qrcode(0,'M');q.addData(t);q.make();return q.createSvgTag(4,2)}catch(e){return''}}
+function txid(a){return('IRON'+a.id).replace(/[^A-Za-z0-9]/g,'').slice(0,25)}
+function zapNum(t){var d=String(t||'').replace(/\D/g,'');if(d.length<=11)d='55'+d;return d}
+function zapLink(a){
+ var p=plano(a.plano),s=st(a),code=pixCode(p.preco,txid(a));
+ var m='Olá, '+a.nome.split(' ')[0]+'! Aqui é da '+S.cfg.nome+'. Sua mensalidade do plano '+p.nome+(s==='atrasado'?' venceu em ':' vence em ')+fd(a.venc)+'. Valor: '+R(p.preco)+'.'+(code?'\n\nPague pelo Pix copia e cola:\n'+code:'')+'\n\nDepois de pagar, envie o comprovante por aqui. Obrigado!';
+ return 'https://wa.me/'+zapNum(a.tel)+'?text='+encodeURIComponent(m)
+}
+function cobrar(id){
+ var a=aluno(id),p=plano(a.plano);
+ if(!S.cfg.pix||!S.cfg.cidade){open('<h2>Configure o Pix</h2><p>Para gerar cobranças, informe a chave Pix e a cidade da academia.</p><div class="bar" style="justify-content:flex-end"><button class="btn g" onclick="dlg.close()">Fechar</button><a class="btn" href="#config" onclick="dlg.close()">Abrir configurações</a></div>');return}
+ var code=pixCode(p.preco,txid(a));
+ open('<h2>Cobrança Pix</h2><p class="sub" style="margin-bottom:10px">'+esc(a.nome)+' · '+esc(p.nome)+' · <b>'+R(p.preco)+'</b></p><div class="qr">'+qrSvg(code)+'</div><label>Pix copia e cola</label><textarea id="pc" rows="3" readonly>'+code+'</textarea><div class="bar" style="margin:12px 0 0"><button class="btn" onclick="copiaPix()">Copiar código Pix</button><a class="btn wa" target="_blank" rel="noopener" href="'+zapLink(a)+'">Enviar por WhatsApp</a></div><div class="bar" style="margin:14px 0 0;justify-content:space-between"><button class="btn g" onclick="dlg.close()">Fechar</button><button class="btn g" onclick="dlg.close();receber(\''+id+'\')">Confirmar pagamento recebido</button></div>')
+}
+function copiaPix(){var t=$('pc');t.select();var ok=function(){toast('Código Pix copiado')};try{navigator.clipboard.writeText(t.value).then(ok,function(){document.execCommand('copy');ok()})}catch(e){document.execCommand('copy');ok()}}
+V.config=function(){
+ var c=S.cfg;
+ return '<h1>Configurações</h1><p class="sub">Dados usados nas cobranças Pix e nas mensagens de WhatsApp.</p><div class="box" style="max-width:520px"><label>Nome da academia</label><input id="cn" value="'+esc(c.nome)+'"><label>Chave Pix (CPF/CNPJ, e-mail, telefone com +55 ou chave aleatória)</label><input id="cp" value="'+esc(c.pix)+'"><label>Cidade</label><input id="cc" value="'+esc(c.cidade)+'"><div class="bar" style="margin-top:16px"><button class="btn" onclick="salvaCfg()">Salvar configurações</button></div></div><div class="box" style="max-width:520px;margin-top:14px"><h2>Backup dos dados</h2><p class="sub" style="margin-bottom:10px">Copie o texto abaixo e guarde em local seguro. Para restaurar, cole o texto e clique em Restaurar backup.</p><textarea id="bk" rows="4">'+esc(JSON.stringify(S))+'</textarea><div class="bar" style="margin-top:10px"><button class="btn g" onclick="restaura()">Restaurar backup</button></div></div>'
+};
+function salvaCfg(){S.cfg={nome:$('cn').value.trim()||'Minha Academia',pix:$('cp').value.trim(),cidade:$('cc').value.trim()};save();toast('Configurações salvas')}
+function restaura(){try{var d=JSON.parse($('bk').value);if(!d.alunos||!d.planos)throw 0;S=d;if(!S.cfg)S.cfg={nome:'Minha Academia',pix:'',cidade:''};save();toast('Backup restaurado');go()}catch(e){toast('Backup inválido. Confira o texto colado')}}
+function go(){
+ var r=(location.hash||'#painel').slice(1);if(!V[r])r='painel';
+ nav(r);$('v').innerHTML=V[r]();if(r==='alunos')listaAlunos()
+}
+addEventListener('hashchange',go);go();
+</script>
+</body>
+</html>
