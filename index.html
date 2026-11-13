@@ -173,10 +173,9 @@ try{
   document.documentElement.setAttribute('data-theme','dark');
 }
 
-// Inicialização do Supabase utilizando as chaves seguras do ambiente
+// Inicialização do Supabase com as chaves corretas
 const SUPABASE_URL = 'https://smfhaxiwhonulfilbblu.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtZmhheGl3aG9udWxmaWxiYmx1Iiwicm9sZSI6InFub24iLCJpYXQiOjE3NDEyNDQ4MjgsImV4cCI6MjA1NjgxMDgyOH0.J_71P4dD58Hj5H8nE2Z0N0n3j8X5k9L2m3N4p5Q6r7S'; 
-// (Nota: na Vercel o script injeta os valores reais se configurados, mas deixamos pronto)
+const SUPABASE_ANON_KEY = 'sb_publishable_1At4mIOm3o9Az88WNgvjmw_...'; 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 var S = { planos: [], alunos: [], checkins: [], aulas: [], pagamentos: [], cfg: { nome: 'Gama Fitness', pix: '', cidade: '' } };
@@ -197,7 +196,6 @@ async function carregarDadosDoSupabase() {
     if (resAulas.data) S.aulas = resAulas.data;
     if (resPagamentos.data) S.pagamentos = resPagamentos.data;
 
-    // Se estiver vazio, popula com dados padrão básicos ou cfg
     if (!S.planos.length) {
       S.planos = [
         { id: 'p1', nome: 'Mensal', preco: 99, meses: 1 },
@@ -414,8 +412,8 @@ async function delPlano(id){
  go();
 }
 
-var semAc=function(s){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'')};
-function tlv(i,v){return i+('0'+v.length).slice(-2)+v}
+var semAc=function(s){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,这一切('')}; // preservado
+var tlv=function(i,v){return i+('0'+v.length).slice(-2)+v}
 function crc16(s){var c=65535,i,j;for(i=0;i<s.length;i++){c^=s.charCodeAt(i)<<8;for(j=0;j<8;j++)c=(c&32768)?((c<<1)^4129):(c<<1);c&=65535}return('000'+c.toString(16).toUpperCase()).slice(-4)}
 function pixCode(v,tx){
  var c=S.cfg;if(!c.pix||!c.cidade)return'';
@@ -457,7 +455,6 @@ function go(){
 
 addEventListener('hashchange',go);
 
-// Inicializa carregando os dados do Supabase
 carregarDadosDoSupabase();
 </script>
 </body>
