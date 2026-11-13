@@ -173,7 +173,6 @@ try{
   document.documentElement.setAttribute('data-theme','dark');
 }
 
-// Inicialização do Supabase com a chave correta
 const SUPABASE_URL = 'https://smfhaxiwhonulfilbblu.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_1At4mIOm3o9Az88WNgvjmw_-mGPNX8L'; 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -366,7 +365,7 @@ var TA=null;
 V.treinos=function(){
  if(!TA||!aluno(TA))TA=S.alunos[0]&&S.alunos[0].id;
  var a=aluno(TA);
- return '<h1>Treinos</h1><p class="sub">Monte a ficha de exercícios de cada aluno.</p>'+(a?'<div class="bar"><select id="ta" onchange="TA=this.value;go()">'+S.alunos.filter(function(x){return x.id===TA}).map(function(x){return '<option value="'+x.id+'"'+(x.id===TA?' selected':'')+'>'+esc(x.nome)+'</option>'}).join('')+'</select></div><div class="box tw">'+(a.treino&&a.treino.length?'<table><tr><th>Exercício</th><th>Séries x repetições</th><th></th></tr>'+a.treino.map(function(t,i){return '<tr><td>'+esc(t.ex)+'</td><td>'+esc(t.sr)+'</td><td><button class="btn s g d" onclick="delEx('+i+')">Remover</button></td></tr>'}).join('')+'</table>':'<p class="empty">Esta ficha está vazia. Adicione o primeiro exercício abaixo.</p>')+'</div><div class="bar" style="margin-top:14px"><input id="ex" placeholder="Exercício (ex.: Leg press)"><input id="sr" placeholder="Séries x reps (ex.: 3x12)" style="max-width:200px"><button class="btn" onclick="addEx()">Adicionar exercício</button></div>':'<p class="empty">Cadastre um aluno para montar uma ficha.</p>')
+ return '<h1>Treinos</h1><p class="sub">Monte a ficha de exercícios de cada aluno.</p>'+(a?'<div class="bar"><select id="ta" onchange="TA=this.value;go()">'+S.alunos.map(function(x){return '<option value="'+x.id+'"'+(x.id===TA?' selected':'')+'>'+esc(x.nome)+'</option>'}).join('')+'</select></div><div class="box tw">'+(a.treino&&a.treino.length?'<table><tr><th>Exercício</th><th>Séries x repetições</th><th></th></tr>'+a.treino.map(function(t,i){return '<tr><td>'+esc(t.ex)+'</td><td>'+esc(t.sr)+'</td><td><button class="btn s g d" onclick="delEx('+i+')">Remover</button></td></tr>'}).join('')+'</table>':'<p class="empty">Esta ficha está vazia. Adicione o primeiro exercício abaixo.</p>')+'</div><div class="bar" style="margin-top:14px"><input id="ex" placeholder="Exercício (ex.: Leg press)"><input id="sr" placeholder="Séries x reps (ex.: 3x12)" style="max-width:200px"><button class="btn" onclick="addEx()">Adicionar exercício</button></div>':'<p class="empty">Cadastre um aluno para montar uma ficha.</p>')
 };
 
 async function addEx(){
