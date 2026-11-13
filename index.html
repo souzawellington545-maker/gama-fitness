@@ -173,7 +173,7 @@ try{
   document.documentElement.setAttribute('data-theme','dark');
 }
 
-// Inicialização do Supabase com as chaves corretas
+// Inicialização do Supabase
 const SUPABASE_URL = 'https://smfhaxiwhonulfilbblu.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_1At4mIOm3o9Az88WNgvjmw_...'; 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -412,7 +412,7 @@ async function delPlano(id){
  go();
 }
 
-var semAc=function(s){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,这一切('')}; // preservado
+var semAc=function(s){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'')};
 var tlv=function(i,v){return i+('0'+v.length).slice(-2)+v}
 function crc16(s){var c=65535,i,j;for(i=0;i<s.length;i++){c^=s.charCodeAt(i)<<8;for(j=0;j<8;j++)c=(c&32768)?((c<<1)^4129):(c<<1);c&=65535}return('000'+c.toString(16).toUpperCase()).slice(-4)}
 function pixCode(v,tx){
@@ -444,7 +444,7 @@ V.config=function(){
 };
 
 function salvaCfg(){
- S.cfg={nome:$('cn').value.trim()||'Gama Fitness',pix:$('cp').value.trim(),cidade:$('cc').value.trim()};
+ S.cfg={nome:$('cn').value.trim()||'Gama Fitness',pix:$('cp'].value.trim(),cidade:$('cc').value.trim()};
  toast('Configurações salvas (locais)');
 }
 
