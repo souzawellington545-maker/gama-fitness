@@ -171,59 +171,28 @@ try{
   document.documentElement.setAttribute('data-theme','dark');
 }
 
-const SUPABASE_URL = 'https://smfhaxiwhonulfilbblu.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_1At4mIOm3o9Az88WNgvjmw_-mGPNX8L'; 
+var S = { 
+  planos: JSON.parse(localStorage.getItem('g_planos')) || [
+    { id: 'p1', nome: 'Mensal', preco: 99, meses: 1 },
+    { id: 'p2', nome: 'Trimestral', preco: 270, meses: 3 },
+    { id: 'p3', nome: 'Anual', preco: 960, meses: 12 }
+  ], 
+  alunos: JSON.parse(localStorage.getItem('g_alunos')) || [], 
+  checkins: JSON.parse(localStorage.getItem('g_checkins')) || [], 
+  aulas: JSON.parse(localStorage.getItem('g_aulas')) || [], 
+  pagamentos: JSON.parse(localStorage.getItem('g_pagamentos')) || [], 
+  cfg: JSON.parse(localStorage.getItem('g_cfg')) || { nome: 'Gama Fitness', pix: '', cidade: '' } 
+};
 
-async function sbReq(table, method, data = null, query = '') {
+function salvarTudo() {
   try {
-    let opts = {
-      method: method,
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=representation'
-      }
-    };
-    if (data) opts.body = JSON.stringify(data);
-    let res = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, opts);
-    if (!res.ok) {
-      console.error('Erro Supabase:', await res.text());
-      return null;
-    }
-    let text = await res.text();
-    return text ? JSON.parse(text) : [];
-  } catch (err) {
-    console.error('Erro de rede:', err);
-    return null;
-  }
-}
-
-var S = { planos: [], alunos: [], checkins: [], aulas: [], pagamentos: [], cfg: { nome: 'Gama Fitness', pix: '', cidade: '' } };
-
-async function carregarDadosDoSupabase() {
-  const [a, p, c, au, pg] = await Promise.all([
-    sbReq('alunos', 'GET'),
-    sbReq('planos', 'GET'),
-    sbReq('checkins', 'GET'),
-    sbReq('aulas', 'GET'),
-    sbReq('pagamentos', 'GET')
-  ]);
-
-  if (a) S.alunos = a;
-  if (p) S.planos = p;
-  if (c) S.checkins = c;
-  if (au) S.aulas = au;
-  if (pg) S.pagamentos = pg;
-
-  if (!S.planos.length) {
-    S.planos = [
-      { id: 'p1', nome: 'Mensal', preco: 99, meses: 1 },
-      { id: 'p2', nome: 'Trimestral', preco: 270, meses: 3 },
-      { id: 'p3', nome: 'Anual', preco: 960, meses: 12 }
-    ];
-  }
-  go();
+    localStorage.setItem('g_planos', JSON.stringify(S.planos));
+    localStorage.setItem('g_alunos', JSON.stringify(S.alunos));
+    localStorage.setItem('g_checkins', JSON.stringify(S.checkins));
+    localStorage.setItem('g_aulas', JSON.stringify(S.aulas));
+    localStorage.setItem('g_pagamentos', JSON.stringify(S.pagamentos));
+    localStorage.setItem('g_cfg', JSON.stringify(S.cfg));
+  } catch(e){}
 }
 
 var iso=function(d){return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
@@ -286,41 +255,34 @@ function formAluno(id){
  open('<h2>'+(id?'Editar aluno':'Novo aluno')+'</h2><label>Nome completo</label><input id="fn" value="'+esc(a.nome)+'"><label>Telefone</label><input id="ft" value="'+esc(a.tel)+'" placeholder="(00) 00000-0000"><label>Plano</label><select id="fp">'+S.planos.map(function(p){return '<option value="'+p.id+'"'+(p.id===a.plano?' selected':'')+'>'+esc(p.nome)+' – '+R(p.preco)+'</option>'}).join('')+'</select><label>Próximo vencimento</label><input type="date" id="fv" value="'+a.venc+'"><div class="bar" style="margin-top:18px;justify-content:flex-end"><button class="btn g" onclick="dlg.close()">Cancelar</button><button class="btn" onclick="salvaAluno(\''+(id||'')+'\')">Salvar aluno</button></div>')
 }
 
-async function salvaAluno(id){
+function salvaAluno(id){
  var n=$('fn').value.trim();if(!n){toast('Informe o nome do aluno');return}
  var d={nome:n,tel:$('ft').value.trim(),plano:$('fp').value,venc:$('fv').value||hoje()};
  if(id){
-   await sbReq('alunos', 'PATCH', d, `?id=eq.${id}`);
-   Object.assign(aluno(id),d);
+   var al=aluno(id);al.nome=d.nome;al.tel=d.tel;al.plano=d.plano;al.venc=d.venc;
  }else{
    d.id=uid();d.treino=[];
-   await sbReq('alunos', 'POST', d);
    S.alunos.push(d);
  }
- dlg.close();toast('Aluno salvo');go();
+ salvarTudo();dlg.close();toast('Aluno salvo');go();
 }
 
-async function delAluno(id){
+function delAluno(id){
  if(!confirm('Excluir este aluno e seu histórico?'))return;
- await sbReq('alunos', 'DELETE', null, `?id=eq.${id}`);
  S.alunos=S.alunos.filter(function(a){return a.id!==id});
  S.checkins=S.checkins.filter(function(c){return c.aluno!==id});
  S.pagamentos=S.pagamentos.filter(function(c){return c.aluno!==id});
  S.aulas.forEach(function(c){c.ins=(c.ins||[]).filter(function(x){return x!==id})});
- toast('Aluno excluído');go();
+ salvarTudo();toast('Aluno excluído');go();
 }
 
-async function receber(id){
+function receber(id){
  var a=aluno(id),p=plano(a.plano),base=a.venc>hoje()?a.venc:hoje();
  var novoVenc=addM(base,p.meses);
  var novoPg={id:uid(),aluno:id,valor:p.preco,data:hoje()};
- 
- await sbReq('pagamentos', 'POST', novoPg);
- await sbReq('alunos', 'PATCH', {venc:novoVenc}, `?id=eq.${id}`);
- 
  S.pagamentos.push(novoPg);
  a.venc=novoVenc;
- toast('Pagamento de '+R(p.preco)+' recebido');go();
+ salvarTudo();toast('Pagamento de '+R(p.preco)+' recebido');go();
 }
 
 V.checkin=function(){
@@ -328,7 +290,7 @@ V.checkin=function(){
  return '<h1>Check-in</h1><p class="sub">Registre a entrada do aluno pelo nome ou código.</p><div class="box ci"><h2>Quem está chegando?</h2><input id="cq" placeholder="Nome do aluno" list="dl" autocomplete="off" onkeydown="if(event.key===\'Enter\')fazCheckin()"><datalist id="dl">'+S.alunos.map(function(a){return '<option value="'+esc(a.nome)+'">'}).join('')+'</datalist><br><button class="btn" onclick="fazCheckin()">Liberar acesso</button><div id="rs"></div></div><div class="box tw" style="margin-top:14px"><h2>Entradas de hoje</h2>'+(l.length?'<table>'+l.map(function(c){var a=aluno(c.aluno);return '<tr><td>'+c.hora+'</td><td>'+esc(a?a.nome:'Removido')+'</td></tr>'}).join('')+'</table>':'<p class="empty">Nenhuma entrada registrada hoje.</p>')+'</div>'
 };
 
-async function fazCheckin(){
+function fazCheckin(){
  var q=$('cq').value.trim().toLowerCase(),r=$('rs');if(!q)return;
  var m=S.alunos.filter(function(a){return a.nome.toLowerCase().indexOf(q)>-1});
  if(m.length!==1){r.innerHTML='<div class="res atrasado">'+(m.length?'Mais de um aluno encontrado. Digite o nome completo.':'Aluno não encontrado. Confira o nome.')+'</div>';return}
@@ -336,10 +298,8 @@ async function fazCheckin(){
  if(st(a)==='atrasado'){r.innerHTML='<div class="res atrasado"><big>Acesso bloqueado</big>Mensalidade vencida em '+fd(a.venc)+'. Receba o pagamento em Alunos.</div>';return}
  var d=new Date(),hh=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
  var novoCheckin={id:uid(),aluno:a.id,dia:hoje(),hora:hh};
- 
- await sbReq('checkins', 'POST', novoCheckin);
  S.checkins.push(novoCheckin);
- 
+ salvarTudo();
  r.innerHTML='<div class="res ok"><big>Acesso liberado</big>'+esc(a.nome)+' · '+hh+(st(a)==='vence'?'<br>Atenção: vence em '+fd(a.venc):'')+'</div>';
  setTimeout(go,1800)
 }
@@ -350,18 +310,16 @@ V.aulas=function(){
 
 function formAula(){open('<h2>Nova aula</h2><label>Nome da aula</label><input id="an"><label>Dia da semana</label><select id="ad"><option>Seg</option><option>Ter</option><option>Qua</option><option>Qui</option><option>Sex</option><option>Sáb</option></select><label>Horário</label><input type="time" id="ah" value="18:00"><label>Vagas</label><input type="number" id="av" value="15" min="1"><div class="bar" style="margin-top:18px;justify-content:flex-end"><button class="btn g" onclick="dlg.close()">Cancelar</button><button class="btn" onclick="salvaAula()">Salvar aula</button></div>')}
 
-async function salvaAula(){
+function salvaAula(){
  var n=$('an').value.trim();if(!n){toast('Informe o nome da aula');return}
  var nova={id:uid(),nome:n,dia:$('ad').value,hora:$('ah').value,vagas:+$('av').value||10,ins:[]};
- await sbReq('aulas', 'POST', nova);
  S.aulas.push(nova);
- dlg.close();toast('Aula criada');go();
+ salvarTudo();dlg.close();toast('Aula criada');go();
 }
 
-async function delAula(id){
- await sbReq('aulas', 'DELETE', null, `?id=eq.${id}`);
+function delAula(id){
  S.aulas=S.aulas.filter(function(c){return c.id!==id});
- go();
+ salvarTudo();go();
 }
 
 function reservar(id){
@@ -370,13 +328,12 @@ function reservar(id){
  open('<h2>Reservar em '+esc(c.nome)+'</h2><label>Aluno</label><select id="ra">'+S.alunos.filter(function(a){return ins.indexOf(a.id)<0}).map(function(a){return '<option value="'+a.id+'">'+esc(a.nome)+'</option>'}).join('')+'</select><div class="bar" style="margin-top:18px;justify-content:flex-end"><button class="btn g" onclick="dlg.close()">Cancelar</button><button class="btn" onclick="confReserva(\''+id+'\')">Confirmar reserva</button></div>')
 }
 
-async function confReserva(id){
+function confReserva(id){
  var c=S.aulas.filter(function(x){return x.id===id})[0],a=$('ra').value;if(!a)return;
  c.ins=c.ins||[];
  if(c.ins.length>=c.vagas){toast('Aula lotada');return}
  c.ins.push(a);
- await sbReq('aulas', 'PATCH', {ins:c.ins}, `?id=eq.${id}`);
- dlg.close();toast('Reserva confirmada');go();
+ salvarTudo();dlg.close();toast('Reserva confirmada');go();
 }
 
 var TA=null;
@@ -386,19 +343,17 @@ V.treinos=function(){
  return '<h1>Treinos</h1><p class="sub">Monte a ficha de exercícios de cada aluno.</p>'+(a?'<div class="bar"><select id="ta" onchange="TA=this.value;go()">'+S.alunos.map(function(x){return '<option value="'+x.id+'"'+(x.id===TA?' selected':'')+'>'+esc(x.nome)+'</option>'}).join('')+'</select></div><div class="box tw">'+(a.treino&&a.treino.length?'<table><tr><th>Exercício</th><th>Séries x repetições</th><th></th></tr>'+a.treino.map(function(t,i){return '<tr><td>'+esc(t.ex)+'</td><td>'+esc(t.sr)+'</td><td><button class="btn s g d" onclick="delEx('+i+')">Remover</button></td></tr>'}).join('')+'</table>':'<p class="empty">Esta ficha está vazia. Adicione o primeiro exercício abaixo.</p>')+'</div><div class="bar" style="margin-top:14px"><input id="ex" placeholder="Exercício (ex.: Leg press)"><input id="sr" placeholder="Séries x reps (ex.: 3x12)" style="max-width:200px"><button class="btn" onclick="addEx()">Adicionar exercício</button></div>':'<p class="empty">Cadastre um aluno para montar uma ficha.</p>')
 };
 
-async function addEx(){
+function addEx(){
  var e=$('ex').value.trim();if(!e){toast('Informe o exercício');return}
  var a=aluno(TA);a.treino=a.treino||[];
  a.treino.push({ex:e,sr:$('sr').value.trim()||'3x12'});
- await sbReq('alunos', 'PATCH', {treino:a.treino}, `?id=eq.${TA}`);
- go();
+ salvarTudo();go();
 }
 
-async function delEx(i){
+function delEx(i){
  var a=aluno(TA);
  a.treino.splice(i,1);
- await sbReq('alunos', 'PATCH', {treino:a.treino}, `?id=eq.${TA}`);
- go();
+ salvarTudo();go();
 }
 
 V.financeiro=function(){
@@ -414,22 +369,20 @@ V.planos=function(){
 
 function formPlano(){open('<h2>Novo plano</h2><label>Nome</label><input id="pn"><label>Preço (R$)</label><input type="number" id="pp" step="0.01" min="0"><label>Duração em meses</label><input type="number" id="pm" value="1" min="1"><div class="bar" style="margin-top:18px;justify-content:flex-end"><button class="btn g" onclick="dlg.close()">Cancelar</button><button class="btn" onclick="salvaPlano()">Salvar plano</button></div>')}
 
-async function salvaPlano(){
+function salvaPlano(){
  var n=$('pn').value.trim();if(!n||!$('pp').value){toast('Informe nome e preço');return}
  var novo={id:uid(),nome:n,preco:+$('pp').value,meses:+$('pm').value||1};
- await sbReq('planos', 'POST', novo);
  S.planos.push(novo);
- dlg.close();toast('Plano criado');go();
+ salvarTudo();dlg.close();toast('Plano criado');go();
 }
 
-async function delPlano(id){
+function delPlano(id){
  if(S.alunos.some(function(a){return a.plano===id})){toast('Há alunos neste plano. Troque o plano deles primeiro.');return}
- await sbReq('planos', 'DELETE', null, `?id=eq.${id}`);
  S.planos=S.planos.filter(function(p){return p.id!==id});
- go();
+ salvarTudo();go();
 }
 
-var semAc=function(s){return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '')};
+var semAc=function(s){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'')};
 var tlv=function(i,v){return i+('0'+v.length).slice(-2)+v}
 function crc16(s){var c=65535,i,j;for(i=0;i<s.length;i++){c^=s.charCodeAt(i)<<8;for(j=0;j<8;j++)c=(c&32768)?((c<<1)^4129):(c<<1);c&=65535}return('000'+c.toString(16).toUpperCase()).slice(-4)}
 function pixCode(v,tx){
@@ -462,7 +415,8 @@ V.config=function(){
 
 function salvaCfg(){
  S.cfg={nome:$('cn').value.trim()||'Gama Fitness',pix:$('cp').value.trim(),cidade:$('cc').value.trim()};
- toast('Configurações salvas (locais)');
+ salvarTudo();
+ toast('Configurações salvas');
 }
 
 function go(){
@@ -471,8 +425,7 @@ function go(){
 }
 
 addEventListener('hashchange',go);
-
-carregarDadosDoSupabase();
+go();
 </script>
 </body>
 </html>
