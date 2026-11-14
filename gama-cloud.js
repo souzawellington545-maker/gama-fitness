@@ -175,34 +175,120 @@
     });
   }
 
+  // NOVO: baixa o backup protegido pela sessão do administrador.
+  function downloadBackup(button) {
+    if (!ready || button.disabled) return;
+
+    button.disabled = true;
+    button.textContent = "Gerando...";
+
+    fetch("/api?action=backup", {
+      method: "GET",
+      credentials: "same-origin",
+      cache: "no-store"
+    })
+      .then(function (response) {
+        if (!response.ok) {
+          return response.json().catch(function () {
+            return {};
+          }).then(function (data) {
+            throw new Error(data.error || "Não foi possível gerar o backup.");
+          });
+        }
+
+        return response.blob();
+      })
+      .then(function (blob) {
+        var url = URL.createObjectURL(blob);
+        var link = document.createElement("a");
+
+        link.href = url;
+        link.download = "gama-fitness-backup.json";
+
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        setTimeout(function () {
+          URL.revokeObjectURL(url);
+        }, 2000);
+
+        if (window.toast) {
+          toast("Backup baixado com sucesso!");
+        }
+      })
+      .catch(function (error) {
+        console.error("GAMA backup:", error);
+
+        if (window.toast) {
+          toast("Erro no backup: " + error.message);
+        } else {
+          alert("Erro no backup: " + error.message);
+        }
+      })
+      .finally(function () {
+        button.disabled = false;
+        button.textContent = "Backup";
+      });
+  }
+
   function addLogout() {
     var main = document.querySelector("main");
 
-    if (!main || document.getElementById("gama-logout")) return;
+    if (!main) return;
 
-    var b = document.createElement("button");
-    b.id = "gama-logout";
-    b.type = "button";
-    b.textContent = "Sair";
+    // Botão de backup
+    if (!document.getElementById("gama-backup")) {
+      var backup = document.createElement("button");
 
-    b.style.cssText =
-      "position:fixed;right:14px;top:12px;z-index:8;" +
-      "border:1px solid var(--ln);background:var(--sf);" +
-      "color:var(--ink);border-radius:8px;padding:7px 12px;" +
-      "font-weight:600";
+      backup.id = "gama-backup";
+      backup.type = "button";
+      backup.textContent = "Backup";
 
-    b.onclick = function () {
-      api("action=logout", {
-        method: "POST",
-        body: "{}"
-      }).finally(function () {
-        ready = false;
-        b.remove();
-        showGate();
-      });
-    };
+      backup.style.cssText =
+        "position:fixed;right:14px;top:12px;z-index:8;" +
+        "border:1px solid var(--ac);background:var(--ac);" +
+        "color:var(--acx);border-radius:8px;padding:7px 12px;" +
+        "font-weight:700;cursor:pointer";
 
-    document.body.appendChild(b);
+      backup.onclick = function () {
+        downloadBackup(backup);
+      };
+
+      document.body.appendChild(backup);
+    }
+
+    // Botão de sair
+    if (!document.getElementById("gama-logout")) {
+      var b = document.createElement("button");
+
+      b.id = "gama-logout";
+      b.type = "button";
+      b.textContent = "Sair";
+
+      b.style.cssText =
+        "position:fixed;right:14px;top:54px;z-index:8;" +
+        "border:1px solid var(--ln);background:var(--sf);" +
+        "color:var(--ink);border-radius:8px;padding:7px 12px;" +
+        "font-weight:600;cursor:pointer";
+
+      b.onclick = function () {
+        api("action=logout", {
+          method: "POST",
+          body: "{}"
+        }).finally(function () {
+          ready = false;
+
+          var backup = document.getElementById("gama-backup");
+          if (backup) backup.remove();
+
+          b.remove();
+          showGate();
+        });
+      };
+
+      document.body.appendChild(b);
+    }
   }
 
   function startRefresh() {
