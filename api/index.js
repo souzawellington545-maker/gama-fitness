@@ -20,24 +20,43 @@ function safeEqual(a, b) {
 }
 
 function sign(value) {
-  return crypto.createHmac("sha256", process.env.SESSION_SECRET).update(value).digest("hex");
+  return crypto.createHmac("sha256", process.env.SESSION_SECRET)
+    .update(value).digest("hex");
 }
 
 function makeSession() {
-  const payload = Buffer.from(JSON.stringify({ role: "owner", exp: Date.now() + SESSION_TTL * 1000 })).toString("base64url");
+  const payload = Buffer.from(JSON.stringify({
+    role: "owner",
+    exp: Date.now() + SESSION_TTL * 1000
+  })).toString("base64url");
+
   return payload + "." + sign(payload);
 }
 
 function validSession(req) {
-  const raw = (req.headers.cookie || "").split(";").map(x => x.trim()).find(x => x.startsWith(COOKIE + "="));
-  if (!raw) return false;
-  const token = decodeURIComponent(raw.slice(COOKIE.length + 1));
-  const parts = token.split(".");
-  if (parts.length !== 2 || !safeEqual(sign(parts[0]), parts[1])) return false;
   try {
-    const data = JSON.parse(Buffer.from(parts[0], "base64url").toString());
+    const raw = (req.headers.cookie || "")
+      .split(";")
+      .map(x => x.trim())
+      .find(x => x.startsWith(COOKIE + "="));
+
+    if (!raw) return false;
+
+    const token = decodeURIComponent(raw.slice(COOKIE.length + 1));
+    const parts = token.split(".");
+
+    if (parts.length !== 2 || !safeEqual(sign(parts[0]), parts[1])) {
+      return false;
+    }
+
+    const data = JSON.parse(
+      Buffer.from(parts[0], "base64url").toString()
+    );
+
     return data.role === "owner" && data.exp > Date.now();
-  } catch (_) { return false; }
+  } catch (_) {
+    return false;
+  }
 }
 
 function cookie(value, maxAge) {
@@ -53,10 +72,14 @@ function send(res, status, body) {
 
 async function readBody(req) {
   let raw = "";
+
   for await (const chunk of req) {
     raw += chunk;
-    if (raw.length > 2_000_000) throw new Error("Payload muito grande.");
+    if (raw.length > 2_000_000) {
+      throw new Error("Payload muito grande.");
+    }
   }
+
   return raw ? JSON.parse(raw) : {};
 }
 
@@ -73,15 +96,23 @@ async function ensureTable() {
 module.exports = async function handler(req, res) {
   try {
     if (!process.env.POSTGRES_URL && !process.env.DATABASE_URL) {
-      return send(res, 500, { error: "Banco não configurado. Confira POSTGRES_URL ou DATABASE_URL na Vercel." });
+      return send(res, 500, {
+        error: "Banco não configurado. Confira POSTGRES_URL ou DATABASE_URL na Vercel."
+      });
     }
 
-    if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) {
-      return send(res, 500, { error: "Configure SESSION_SECRET com pelo menos 32 caracteres." });
+    if (!process.env.SESSION_SECRET ||
+        process.env.SESSION_SECRET.length < 32) {
+      return send(res, 500, {
+        error: "Configure SESSION_SECRET com pelo menos 32 caracteres."
+      });
     }
 
-    if (!process.env.GAMA_ADMIN_PASSWORD || process.env.GAMA_ADMIN_PASSWORD.length < 10) {
-      return send(res, 500, { error: "Configure GAMA_ADMIN_PASSWORD com pelo menos 10 caracteres." });
+    if (!process.env.GAMA_ADMIN_PASSWORD ||
+        process.env.GAMA_ADMIN_PASSWORD.length < 10) {
+      return send(res, 500, {
+        error: "Configure GAMA_ADMIN_PASSWORD com pelo menos 10 caracteres."
+      });
     }
 
     await ensureTable();
@@ -104,12 +135,51 @@ module.exports = async function handler(req, res) {
       return send(res, 200, { ok: true });
     }
 
-    if (!validSession(req)) return send(res, 401, { error: "Faça login para continuar." });
+    if (!validSession(req)) {
+      return send(res, 401, { error: "Faça login para continuar." });
+    }
+
+    // BACKUP: exportação protegida pela sessão administrativa.
+    if (req.method === "GET" && action === "backup") {
+      const result = await pool.query(
+        "SELECT payload, updated_at FROM gama_fitness_state WHERE id = $1",
+        ["main"]
+      );
+
+      if (!result.rowCount) {
+        return send(res, 404, {
+          error: "Nenhum dado encontrado para backup."
+        });
+      }
+
+      const backup = {
+        format: "gama-fitness-backup",
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        databaseUpdatedAt: result.rows[0].updated_at,
+        state: result.rows[0].payload
+      };
+
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.setHeader("Cache-Control", "no-store, private");
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="gama-fitness-backup.json"'
+      );
+
+      return res.end(JSON.stringify(backup, null, 2));
+    }
 
     if (req.method === "GET" && action === "state") {
-      const result = await pool.query("SELECT payload, updated_at FROM gama_fitness_state WHERE id = $1", ["main"]);
+      const result = await pool.query(
+        "SELECT payload, updated_at FROM gama_fitness_state WHERE id = $1",
+        ["main"]
+      );
 
-      if (!result.rowCount) return send(res, 200, { initialized: false, state: null });
+      if (!result.rowCount) {
+        return send(res, 200, { initialized: false, state: null });
+      }
 
       return send(res, 200, {
         initialized: true,
@@ -129,23 +199,31 @@ module.exports = async function handler(req, res) {
       const serialized = JSON.stringify(state);
 
       if (serialized.length > 1_500_000) {
-        return send(res, 413, { error: "Dados excedem o limite permitido." });
+        return send(res, 413, {
+          error: "Dados excedem o limite permitido."
+        });
       }
 
       await pool.query(
         `INSERT INTO gama_fitness_state (id, payload, updated_at)
          VALUES ($1, $2::jsonb, NOW())
-         ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()`,
+         ON CONFLICT (id) DO UPDATE
+         SET payload = EXCLUDED.payload, updated_at = NOW()`,
         ["main", serialized]
       );
 
-      return send(res, 200, { ok: true, updatedAt: new Date().toISOString() });
+      return send(res, 200, {
+        ok: true,
+        updatedAt: new Date().toISOString()
+      });
     }
 
     return send(res, 404, { error: "Rota não encontrada." });
 
   } catch (err) {
     console.error("GAMA API:", err);
-    return send(res, 500, { error: "Falha interna na API. Confira os logs da Vercel." });
+    return send(res, 500, {
+      error: "Falha interna na API. Confira os logs da Vercel."
+    });
   }
 };
