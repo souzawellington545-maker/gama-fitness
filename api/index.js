@@ -88,9 +88,11 @@ async function ensureTable() {
     CREATE TABLE IF NOT EXISTS gama_fitness_state (
       id TEXT PRIMARY KEY,
       payload JSONB NOT NULL,
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      version BIGINT NOT NULL DEFAULT 1
     )
   `);
+  await pool.query(`ALTER TABLE gama_fitness_state ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 1`);
 }
 
 module.exports = async function handler(req, res) {
@@ -142,7 +144,7 @@ module.exports = async function handler(req, res) {
     // BACKUP: exportação protegida pela sessão administrativa.
     if (req.method === "GET" && action === "backup") {
       const result = await pool.query(
-        "SELECT payload, updated_at FROM gama_fitness_state WHERE id = $1",
+        "SELECT payload, updated_at, version FROM gama_fitness_state WHERE id = $1",
         ["main"]
       );
 
@@ -157,6 +159,7 @@ module.exports = async function handler(req, res) {
         version: 1,
         exportedAt: new Date().toISOString(),
         databaseUpdatedAt: result.rows[0].updated_at,
+        version: Number(result.rows[0].version),
         state: result.rows[0].payload
       };
 
@@ -173,7 +176,7 @@ module.exports = async function handler(req, res) {
 
     if (req.method === "GET" && action === "state") {
       const result = await pool.query(
-        "SELECT payload, updated_at FROM gama_fitness_state WHERE id = $1",
+        "SELECT payload, updated_at, version FROM gama_fitness_state WHERE id = $1",
         ["main"]
       );
 
@@ -184,7 +187,8 @@ module.exports = async function handler(req, res) {
       return send(res, 200, {
         initialized: true,
         state: result.rows[0].payload,
-        updatedAt: result.rows[0].updated_at
+        updatedAt: result.rows[0].updated_at,
+        version: Number(result.rows[0].version)
       });
     }
 
@@ -204,25 +208,23 @@ module.exports = async function handler(req, res) {
         });
       }
 
-      const expected = body.expectedUpdatedAt;
+      const expected = body.expectedVersion;
 
       let saved;
       if (expected === null || expected === undefined) {
-        // Primeira gravação: só cria se ainda não existir estado central.
         saved = await pool.query(
-          `INSERT INTO gama_fitness_state (id, payload, updated_at)
-           VALUES ($1, $2::jsonb, NOW())
+          `INSERT INTO gama_fitness_state (id, payload, updated_at, version)
+           VALUES ($1, $2::jsonb, NOW(), 1)
            ON CONFLICT (id) DO NOTHING
-           RETURNING updated_at`,
+           RETURNING updated_at, version`,
           ["main", serialized]
         );
-      } else if (typeof expected === "string" && expected.length <= 64) {
-        // Controle otimista: só grava se a versão lida pelo aparelho ainda for a atual.
+      } else if (Number.isSafeInteger(expected) && expected > 0) {
         saved = await pool.query(
           `UPDATE gama_fitness_state
-           SET payload = $2::jsonb, updated_at = NOW()
-           WHERE id = $1 AND updated_at = $3::timestamptz
-           RETURNING updated_at`,
+           SET payload = $2::jsonb, updated_at = NOW(), version = version + 1
+           WHERE id = $1 AND version = $3
+           RETURNING updated_at, version`,
           ["main", serialized, expected]
         );
       } else {
@@ -237,7 +239,8 @@ module.exports = async function handler(req, res) {
 
       return send(res, 200, {
         ok: true,
-        updatedAt: saved.rows[0].updated_at
+        updatedAt: saved.rows[0].updated_at,
+        version: Number(saved.rows[0].version)
       });
     }
 
