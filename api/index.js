@@ -204,17 +204,40 @@ module.exports = async function handler(req, res) {
         });
       }
 
-      await pool.query(
-        `INSERT INTO gama_fitness_state (id, payload, updated_at)
-         VALUES ($1, $2::jsonb, NOW())
-         ON CONFLICT (id) DO UPDATE
-         SET payload = EXCLUDED.payload, updated_at = NOW()`,
-        ["main", serialized]
-      );
+      const expected = body.expectedUpdatedAt;
+
+      let saved;
+      if (expected === null || expected === undefined) {
+        // Primeira gravação: só cria se ainda não existir estado central.
+        saved = await pool.query(
+          `INSERT INTO gama_fitness_state (id, payload, updated_at)
+           VALUES ($1, $2::jsonb, NOW())
+           ON CONFLICT (id) DO NOTHING
+           RETURNING updated_at`,
+          ["main", serialized]
+        );
+      } else if (typeof expected === "string" && expected.length <= 64) {
+        // Controle otimista: só grava se a versão lida pelo aparelho ainda for a atual.
+        saved = await pool.query(
+          `UPDATE gama_fitness_state
+           SET payload = $2::jsonb, updated_at = NOW()
+           WHERE id = $1 AND updated_at = $3::timestamptz
+           RETURNING updated_at`,
+          ["main", serialized, expected]
+        );
+      } else {
+        return send(res, 400, { error: "Versão dos dados inválida." });
+      }
+
+      if (!saved.rowCount) {
+        return send(res, 409, {
+          error: "Os dados foram alterados em outro aparelho. Atualize os dados antes de continuar."
+        });
+      }
 
       return send(res, 200, {
         ok: true,
-        updatedAt: new Date().toISOString()
+        updatedAt: saved.rows[0].updated_at
       });
     }
 
