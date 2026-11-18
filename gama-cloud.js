@@ -4,7 +4,7 @@
 
   var originalSave = window.salvarTudo;
   var ready = false, timer = null, sending = false, pending = false;
-  var cloudUpdatedAt = null, syncBlocked = false;
+  var cloudVersion = null, syncBlocked = false;
   var keys = ["planos", "alunos", "checkins", "aulas", "pagamentos", "cfg"];
 
   function localState() {
@@ -127,10 +127,10 @@
 
     api("action=state", {
       method: "PUT",
-      body: JSON.stringify({ state: localState(), expectedUpdatedAt: cloudUpdatedAt })
+      body: JSON.stringify({ state: localState(), expectedVersion: cloudVersion })
     })
       .then(function (data) {
-        cloudUpdatedAt = data.updatedAt;
+        cloudVersion = data.version;
       })
       .catch(function (e) {
         console.error("GAMA sincronização:", e);
@@ -157,7 +157,7 @@
         // Não mistura novamente os dados locais, evitando ressuscitar
         // alunos, planos ou outros registros que foram excluídos.
         applyState(data.state);
-        cloudUpdatedAt = data.updatedAt || null;
+        cloudVersion = data.version;
 
         return Promise.resolve();
 
@@ -169,7 +169,7 @@
         return api("action=state", {
           method: "PUT",
           body: JSON.stringify({ state: localState(), expectedUpdatedAt: null })
-        }).then(function (saved) { cloudUpdatedAt = saved.updatedAt; });
+        }).then(function (saved) { cloudVersion = saved.version; });
       }
 
     }).then(function () {
@@ -316,9 +316,9 @@
       api("action=state").then(function (data) {
         // A edição pode começar enquanto a consulta está em trânsito.
         if (pending || sending || syncBlocked) return;
-        if (data.initialized && validState(data.state) && data.updatedAt !== cloudUpdatedAt) {
+        if (data.initialized && validState(data.state) && data.version !== cloudVersion) {
           applyState(data.state);
-          cloudUpdatedAt = data.updatedAt || null;
+          cloudVersion = data.version;
 
           if (typeof go === "function") go();
         }
