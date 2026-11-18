@@ -314,6 +314,8 @@
       ) return;
 
       api("action=state").then(function (data) {
+        // A edição pode começar enquanto a consulta está em trânsito.
+        if (pending || sending || syncBlocked) return;
         if (data.initialized && validState(data.state) && data.updatedAt !== cloudUpdatedAt) {
           applyState(data.state);
           cloudUpdatedAt = data.updatedAt || null;
