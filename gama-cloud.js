@@ -190,10 +190,16 @@
       '<p>Este aparelho possui alterações que não foram enviadas porque outro aparelho salvou dados mais recentes.</p>' +
       '<p><strong>Baixe o arquivo antes de continuar.</strong> Ele contém os dados locais deste aparelho e ficará guardado mesmo se você atualizar a página.</p>' +
       '<button type="button" id="gama-download-conflict">Baixar alterações locais</button>' +
-      '<button type="button" id="gama-continue-cloud" style="background:var(--sf);color:var(--ink);border:1px solid var(--ln)">Continuar para os dados da nuvem</button>';
+      '<button type="button" id="gama-continue-cloud" style="background:var(--sf);color:var(--ink);border:1px solid var(--ln)">Continuar mantendo o backup guardado</button>' +
+      '<button type="button" id="gama-dismiss-conflict" style="background:transparent;color:var(--mut);border:1px solid var(--ln)">Já baixei: não mostrar novamente</button>';
 
     document.getElementById("gama-download-conflict").onclick = downloadLocalConflict;
     document.getElementById("gama-continue-cloud").onclick = function () {
+      loadCloudData();
+    };
+    document.getElementById("gama-dismiss-conflict").onclick = function () {
+      if (!confirm("Confirma que já baixou e guardou o arquivo de alterações locais? A cópia deste navegador será apagada.")) return;
+      localStorage.removeItem(conflictKey);
       loadCloudData();
     };
   }
