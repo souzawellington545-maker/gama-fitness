@@ -93,6 +93,14 @@ async function ensureTable() {
     )
   `);
   await pool.query(`ALTER TABLE gama_fitness_state ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 1`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS gama_login_limits (
+      ip_hash TEXT PRIMARY KEY,
+      window_started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      failed_attempts INTEGER NOT NULL DEFAULT 0,
+      blocked_until TIMESTAMPTZ
+    )
+  `);
 }
 
 module.exports = async function handler(req, res) {
@@ -123,11 +131,63 @@ module.exports = async function handler(req, res) {
 
     if (req.method === "POST" && action === "login") {
       const body = await readBody(req);
+      const forwardedFor = req.headers["x-forwarded-for"];
+      const clientIp = String(
+        (forwardedFor || req.socket?.remoteAddress || "unknown")
+      ).split(",")[0].trim().slice(0, 100);
+      const ipHash = crypto.createHmac("sha256", process.env.SESSION_SECRET)
+        .update("gama-login:" + clientIp).digest("hex");
+
+      const lock = await pool.query(
+        "SELECT blocked_until FROM gama_login_limits WHERE ip_hash = $1 AND blocked_until > NOW()",
+        [ipHash]
+      );
+
+      if (lock.rowCount) {
+        return send(res, 429, {
+          error: "Muitas tentativas de acesso. Aguarde 15 minutos antes de tentar novamente."
+        });
+      }
 
       if (!safeEqual(body.password || "", process.env.GAMA_ADMIN_PASSWORD)) {
+        const attempt = await pool.query(
+          `INSERT INTO gama_login_limits
+             (ip_hash, window_started_at, failed_attempts, blocked_until)
+           VALUES ($1, NOW(), 1, NULL)
+           ON CONFLICT (ip_hash) DO UPDATE SET
+             failed_attempts = CASE
+               WHEN gama_login_limits.window_started_at <= NOW() - INTERVAL '15 minutes'
+               THEN 1
+               ELSE gama_login_limits.failed_attempts + 1
+             END,
+             window_started_at = CASE
+               WHEN gama_login_limits.window_started_at <= NOW() - INTERVAL '15 minutes'
+               THEN NOW()
+               ELSE gama_login_limits.window_started_at
+             END,
+             blocked_until = CASE
+               WHEN CASE
+                 WHEN gama_login_limits.window_started_at <= NOW() - INTERVAL '15 minutes'
+                 THEN 1
+                 ELSE gama_login_limits.failed_attempts + 1
+               END >= 5
+               THEN NOW() + INTERVAL '15 minutes'
+               ELSE NULL
+             END
+           RETURNING blocked_until`,
+          [ipHash]
+        );
+
+        if (attempt.rows[0]?.blocked_until) {
+          return send(res, 429, {
+            error: "Limite de tentativas atingido. Aguarde 15 minutos antes de tentar novamente."
+          });
+        }
+
         return send(res, 401, { error: "Senha incorreta." });
       }
 
+      await pool.query("DELETE FROM gama_login_limits WHERE ip_hash = $1", [ipHash]);
       res.setHeader("Set-Cookie", cookie(makeSession(), SESSION_TTL));
       return send(res, 200, { ok: true });
     }
