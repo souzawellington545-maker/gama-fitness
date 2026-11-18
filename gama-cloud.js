@@ -4,6 +4,7 @@
 
   var originalSave = window.salvarTudo;
   var ready = false, timer = null, sending = false, pending = false;
+  var cloudUpdatedAt = null, syncBlocked = false;
   var keys = ["planos", "alunos", "checkins", "aulas", "pagamentos", "cfg"];
 
   function localState() {
@@ -51,7 +52,9 @@
         return {};
       }).then(function (data) {
         if (!r.ok) {
-          throw new Error(data.error || "Erro de comunicação.");
+          var error = new Error(data.error || "Erro de comunicação.");
+          error.status = r.status;
+          throw error;
         }
         return data;
       });
@@ -109,7 +112,7 @@
   }
 
   function saveCloud() {
-    if (!ready) return;
+    if (!ready || syncBlocked) return;
 
     pending = true;
     clearTimeout(timer);
@@ -117,22 +120,28 @@
   }
 
   function flush() {
-    if (!ready || sending || !pending) return;
+    if (!ready || sending || !pending || syncBlocked) return;
 
     pending = false;
     sending = true;
 
     api("action=state", {
       method: "PUT",
-      body: JSON.stringify({ state: localState() })
+      body: JSON.stringify({ state: localState(), expectedUpdatedAt: cloudUpdatedAt })
     })
+      .then(function (data) {
+        cloudUpdatedAt = data.updatedAt;
+      })
       .catch(function (e) {
-        pending = true;
         console.error("GAMA sincronização:", e);
-
-        if (window.toast) {
-          toast("Falha ao sincronizar: " + e.message);
+        if (e.status === 409) {
+          syncBlocked = true;
+          pending = false;
+          if (window.toast) toast("Conflito entre aparelhos. Alterações locais preservadas; não edite até atualizar os dados.");
+          return;
         }
+        pending = true;
+        if (window.toast) toast("Falha ao sincronizar: " + e.message);
       })
       .finally(function () {
         sending = false;
@@ -148,6 +157,7 @@
         // Não mistura novamente os dados locais, evitando ressuscitar
         // alunos, planos ou outros registros que foram excluídos.
         applyState(data.state);
+        cloudUpdatedAt = data.updatedAt || null;
 
         return Promise.resolve();
 
@@ -158,8 +168,8 @@
 
         return api("action=state", {
           method: "PUT",
-          body: JSON.stringify({ state: localState() })
-        });
+          body: JSON.stringify({ state: localState(), expectedUpdatedAt: null })
+        }).then(function (saved) { cloudUpdatedAt = saved.updatedAt; });
       }
 
     }).then(function () {
@@ -297,14 +307,16 @@
     setInterval(function () {
       if (
         !ready ||
+        syncBlocked ||
         pending ||
         sending ||
         document.visibilityState !== "visible"
       ) return;
 
       api("action=state").then(function (data) {
-        if (data.initialized && validState(data.state)) {
+        if (data.initialized && validState(data.state) && data.updatedAt !== cloudUpdatedAt) {
           applyState(data.state);
+          cloudUpdatedAt = data.updatedAt || null;
 
           if (typeof go === "function") go();
         }
