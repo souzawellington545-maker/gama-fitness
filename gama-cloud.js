@@ -137,7 +137,17 @@
         if (e.status === 409) {
           syncBlocked = true;
           pending = false;
-          if (window.toast) toast("Conflito entre aparelhos. Alterações locais preservadas; não edite até atualizar os dados.");
+          try {
+            localStorage.setItem(conflictKey, JSON.stringify({
+              format: "gama-fitness-local-conflict",
+              savedAt: new Date().toISOString(),
+              cloudVersion: cloudVersion,
+              state: localState()
+            }));
+          } catch (backupError) {
+            console.error("GAMA backup local de conflito:", backupError);
+          }
+          if (window.toast) toast("Conflito detectado. Alterações deste aparelho foram guardadas em backup local; não recarregue antes de baixar.");
           return;
         }
         pending = true;
@@ -149,37 +159,76 @@
       });
   }
 
+  var conflictKey = "gama_conflict_backup";
+
+  function downloadLocalConflict() {
+    var raw = localStorage.getItem(conflictKey);
+    if (!raw) {
+      if (window.toast) toast("Não há backup de conflito neste aparelho.");
+      return;
+    }
+
+    var blob = new Blob([raw], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement("a");
+    link.href = url;
+    link.download = "gama-fitness-conflito-local.json";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+  }
+
+  function showConflictRecovery() {
+    var gate = document.getElementById("gama-cloud-gate");
+    if (!gate) return;
+
+    var card = gate.querySelector(".gama-gate-card");
+    card.innerHTML =
+      '<div class="gama-gate-logo">gama<span>fitness</span></div>' +
+      '<h2>Backup local protegido</h2>' +
+      '<p>Este aparelho possui alterações que não foram enviadas porque outro aparelho salvou dados mais recentes.</p>' +
+      '<p><strong>Baixe o arquivo antes de continuar.</strong> Ele contém os dados locais deste aparelho e ficará guardado mesmo se você atualizar a página.</p>' +
+      '<button type="button" id="gama-download-conflict">Baixar alterações locais</button>' +
+      '<button type="button" id="gama-continue-cloud" style="background:var(--sf);color:var(--ink);border:1px solid var(--ln)">Continuar mantendo o backup guardado</button>' +
+      '<button type="button" id="gama-dismiss-conflict" style="background:transparent;color:var(--mut);border:1px solid var(--ln)">Já baixei: não mostrar novamente</button>';
+
+    document.getElementById("gama-download-conflict").onclick = downloadLocalConflict;
+    document.getElementById("gama-continue-cloud").onclick = function () {
+      loadCloudData();
+    };
+    document.getElementById("gama-dismiss-conflict").onclick = function () {
+      if (!confirm("Confirma que já baixou e guardou o arquivo de alterações locais? A cópia deste navegador será apagada.")) return;
+      localStorage.removeItem(conflictKey);
+      loadCloudData();
+    };
+  }
+
   function loadCloud() {
+    if (localStorage.getItem(conflictKey)) {
+      showConflictRecovery();
+      return Promise.resolve();
+    }
+    return loadCloudData();
+  }
+
+  function loadCloudData() {
     return api("action=state").then(function (data) {
       if (data.initialized && validState(data.state)) {
-
-        // A nuvem é a fonte oficial depois da primeira importação.
-        // Não mistura novamente os dados locais, evitando ressuscitar
-        // alunos, planos ou outros registros que foram excluídos.
         applyState(data.state);
         cloudVersion = data.version;
-
-        return Promise.resolve();
-
       } else {
-
-        // Primeiro acesso: importa os dados locais deste navegador.
         originalSave();
-
         return api("action=state", {
           method: "PUT",
-          body: JSON.stringify({ state: localState(), expectedUpdatedAt: null })
+          body: JSON.stringify({ state: localState(), expectedVersion: null })
         }).then(function (saved) { cloudVersion = saved.version; });
       }
-
     }).then(function () {
       ready = true;
-
       var gate = document.getElementById("gama-cloud-gate");
       if (gate) gate.remove();
-
       if (typeof go === "function") go();
-
       addLogout();
       startRefresh();
     });
