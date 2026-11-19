@@ -348,13 +348,21 @@ function delAluno(id){
 }
 
 function receber(id){
- var a=aluno(id),p=plano(a.plano),base=a.venc>hoje()?a.venc:hoje();
+ var a=aluno(id);
+ if(!a){toast('Aluno não encontrado');return}
+ var p=plano(a.plano),base=a.venc>hoje()?a.venc:hoje();
  var novoVenc=addM(base,p.meses);
  var novoPg={id:uid(),aluno:id,valor:p.preco,data:hoje(),periodoAte:novoVenc};
- S.pagamentos.push(novoPg);
- a.venc=novoVenc;
- a.pagoAte=novoVenc;
- salvarTudo();toast('Pagamento de '+R(p.preco)+' recebido');go();
+ if(typeof window.gamaRegisterPayment!=='function'){
+   toast('API financeira indisponível. Atualize a página e tente novamente.');return;
+ }
+ window.gamaRegisterPayment(novoPg,S).then(function(){
+   toast('Pagamento de '+R(p.preco)+' registrado no financeiro');
+   go();
+ }).catch(function(e){
+   console.error('GAMA recebimento:',e);
+   toast('Não foi possível registrar: '+e.message);
+ });
 }
 
 V.checkin=function(){
