@@ -488,8 +488,32 @@ function copiaPix(){var t=$('pc');t.select();var ok=function(){toast('Código Pi
 
 V.config=function(){
  var c=S.cfg;
- return '<h1>Configurações</h1><p class="sub">Dados usados nas cobranças Pix e nas mensagens de WhatsApp.</p><div class="box" style="max-width:520px"><label>Nome da academia</label><input id="cn" value="'+esc(c.nome)+'"><label>Chave Pix (CPF/CNPJ, e-mail, telefone com +55 ou chave aleatória)</label><input id="cp" value="'+esc(c.pix)+'"><label>Cidade</label><input id="cc" value="'+esc(c.cidade)+'"><div class="bar" style="margin-top:16px"><button class="btn" onclick="salvaCfg()">Salvar configurações</button></div></div>'
+ return '<h1>Configurações</h1><p class="sub">Dados usados nas cobranças Pix e nas mensagens de WhatsApp.</p><div class="box" style="max-width:520px"><label>Nome da academia</label><input id="cn" value="'+esc(c.nome)+'"><label>Chave Pix (CPF/CNPJ, e-mail, telefone com +55 ou chave aleatória)</label><input id="cp" value="'+esc(c.pix)+'"><label>Cidade</label><input id="cc" value="'+esc(c.cidade)+'"><div class="bar" style="margin-top:16px"><button class="btn" onclick="salvaCfg()">Salvar configurações</button></div></div>'+
+ '<div class="box" style="max-width:720px;margin-top:16px"><h2>Manutenção do sistema</h2><p class="sub">Ações administrativas para organizar os históricos. Faça o backup antes de qualquer limpeza.</p>'+
+ '<div style="padding:14px 0;border-top:1px solid var(--ln)"><b>Histórico financeiro</b><p class="dash-note">Apaga todos os lançamentos de recebimentos e remove a marcação de pagamento vigente dos alunos. Os vencimentos cadastrados serão mantidos e a situação será recalculada por eles.</p><button class="btn s g d" onclick="limparHistorico(\'financeiro\')">Limpar histórico financeiro</button></div>'+
+ '<div style="padding:14px 0;border-top:1px solid var(--ln)"><b>Histórico de check-ins</b><p class="dash-note">Apaga todos os registros de entrada. Não exclui alunos, planos ou aulas.</p><button class="btn s g d" onclick="limparHistorico(\'checkins\')">Limpar histórico de check-ins</button></div>'+
+ '<p class="dash-note">As alterações são sincronizadas com os outros aparelhos conectados à academia. Esta área não apaga cadastros de alunos nem dados de teste automaticamente.</p></div>';
 };
+
+function limparHistorico(tipo){
+ var financeiro=tipo==='financeiro';
+ var total=financeiro?S.pagamentos.length:S.checkins.length;
+ var titulo=financeiro?'histórico financeiro':'histórico de check-ins';
+ if(!total){toast('Não há registros para limpar');return}
+ if(!confirm('ATENÇÃO: você está prestes a apagar '+total+' registro(s) do '+titulo+'. Esta ação será sincronizada com todos os aparelhos e não poderá ser desfeita pelo sistema. Primeiro, baixe o Backup no botão fixo no topo. Deseja continuar?'))return;
+ var palavra=financeiro?'APAGAR FINANCEIRO':'APAGAR CHECKINS';
+ var digitada=prompt('Para confirmar, digite exatamente: '+palavra);
+ if(digitada!==palavra){toast('Limpeza cancelada');return}
+ if(financeiro){
+   S.pagamentos=[];
+   S.alunos.forEach(function(a){delete a.pagoAte});
+ }else{
+   S.checkins=[];
+ }
+ salvarTudo();
+ toast(financeiro?'Histórico financeiro limpo':'Histórico de check-ins limpo');
+ go();
+}
 
 function salvaCfg(){
  S.cfg={nome:$('cn').value.trim()||'Gama Fitness',pix:$('cp').value.trim(),cidade:$('cc').value.trim()};
