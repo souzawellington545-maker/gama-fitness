@@ -156,6 +156,13 @@ a.btn{text-decoration:none;display:inline-block}
 .wa{background:#1a7f47;color:#fff}
 .qr{background:#fff;padding:8px;border-radius:10px;width:210px;margin:0 auto 12px}
 .qr svg{width:100%;height:auto;display:block}
+.dash-actions{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 18px}
+.dash-actions a{flex:1;min-width:145px;text-align:center}
+.kpi small{line-height:1.4}
+.kpi strong{display:block;overflow-wrap:anywhere}
+.dash-section{margin-top:14px}
+.dash-note{color:var(--mut);font-size:12px;margin-top:8px}
+.filter-select{max-width:190px}
 </style>
 </head>
 <body>
@@ -227,26 +234,34 @@ function tema(){
 
 var V={};
 V.painel=function(){
- var h=hoje(),mes=h.slice(0,7),at=S.alunos.filter(function(a){return st(a)!=='atrasado'}).length,
+ var h=hoje(),mes=h.slice(0,7),
+ at=S.alunos.filter(function(a){return st(a)!=='atrasado'}).length,
  inad=S.alunos.filter(function(a){return st(a)==='atrasado'}).length,
- rec=S.pagamentos.filter(function(p){return p.data && p.data.slice(0,7)===mes}).reduce(function(s,p){return s+p.valor},0),
+ breve=S.alunos.filter(function(a){return st(a)==='vence'}).length,
+ rec=S.pagamentos.filter(function(p){return p.data && p.data.slice(0,7)===mes}).reduce(function(s,p){return s+(Number(p.valor)||0)},0),
  hj=S.checkins.filter(function(c){return c.dia===h}).length,
- dias=[0,1,2,3,4,5,6].map(function(i){var d=addD(h,i-6);return{d:d,n:S.checkins.filter(function(c){return c.dia===d}).length}}),
- mx=Math.max.apply(null,dias.map(function(x){return x.n}).concat([1])),
- sem=['dom','seg','ter','qua','qui','sex','sáb'],
+ meses=[0,1,2,3,4,5].map(function(i){
+   var d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);
+   var chave=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2);
+   return {chave:chave,nome:d.toLocaleDateString('pt-BR',{month:'short'}).replace('.',''),n:S.pagamentos.filter(function(p){return p.data && p.data.slice(0,7)===chave}).reduce(function(t,p){return t+(Number(p.valor)||0)},0)};
+ }).reverse(),
+ mx=Math.max.apply(null,meses.map(function(x){return x.n}).concat([1])),
  prox=S.alunos.filter(function(a){return st(a)!=='ok'}).sort(function(a,b){return a.venc<b.venc?-1:1});
  return '<h1>Painel</h1><p class="sub">Resumo de hoje, '+fd(h)+'</p>'+
- '<div class="grid"><div class="box kpi"><small>Alunos ativos</small><strong>'+at+'</strong></div><div class="box kpi"><small>Receita do mês</small><strong>'+R(rec)+'</strong></div><div class="box kpi"><small>Inadimplentes</small><strong>'+inad+'</strong></div><div class="box kpi"><small>Check-ins hoje</small><strong>'+hj+'</strong></div></div>'+
- '<div class="row2"><div class="box"><h2>Frequência dos últimos 7 dias</h2><div class="bars">'+dias.map(function(x){return '<div><span>'+x.n+'</span><i style="height:'+(x.n/mx*100)+'%"></i>'+sem[new Date(x.d+'T12:00:00').getDay()]+'</div>'}).join('')+'</div></div>'+
- '<div class="box"><h2>Cobranças pendentes</h2>'+(prox.length?'<div class="tw"><table>'+prox.map(function(a){return '<tr><td>'+esc(a.nome)+'</td><td>'+fd(a.venc)+'</td><td>'+tag(a)+'</td><td><a class="btn s wa" target="_blank" rel="noopener" href="'+zapLink(a)+'">Cobrar</a></td></tr>'}).join('')+'</table></div>':'<p class="empty">Nenhuma cobrança pendente.</p>')+'</div></div>'
+ '<div class="dash-actions"><a class="btn" href="#alunos">+ Novo aluno / Alunos</a><a class="btn g" href="#checkin">Registrar check-in</a><a class="btn g" href="#financeiro">Ver financeiro</a></div>'+
+ '<div class="grid"><div class="box kpi"><small>Alunos em dia</small><strong>'+at+'</strong></div><div class="box kpi"><small>Receita recebida no mês</small><strong>'+R(rec)+'</strong></div><div class="box kpi"><small>Mensalidades vencidas</small><strong>'+inad+'</strong></div><div class="box kpi"><small>Check-ins hoje</small><strong>'+hj+'</strong></div></div>'+
+ '<div class="grid"><div class="box kpi"><small>Vencem nos próximos 5 dias</small><strong>'+breve+'</strong></div><div class="box kpi"><small>Total de alunos cadastrados</small><strong>'+S.alunos.length+'</strong></div></div>'+
+ '<div class="box dash-section"><h2>Receita dos últimos 6 meses</h2><div class="bars">'+meses.map(function(x){return '<div><span>'+R(x.n)+'</span><i style="height:'+(x.n/mx*100)+'%"></i>'+esc(x.nome)+'</div>'}).join('')+'</div><p class="dash-note">Valores calculados a partir dos pagamentos registrados no sistema.</p></div>'+
+ '<div class="box dash-section"><h2>Vencimentos que precisam de atenção</h2>'+(prox.length?'<div class="tw"><table><tr><th>Aluno</th><th>Vencimento</th><th>Situação</th><th></th></tr>'+prox.map(function(a){return '<tr><td>'+esc(a.nome)+'</td><td>'+fd(a.venc)+'</td><td>'+tag(a)+'</td><td><a class="btn s wa" target="_blank" rel="noopener" href="'+zapLink(a)+'">Cobrar</a></td></tr>'}).join('')+'</table></div>':'<p class="empty">Nenhuma mensalidade próxima do vencimento ou atrasada.</p>')+'</div>';
 };
 
 V.alunos=function(){
- return '<h1>Alunos</h1><p class="sub">Cadastro, planos e situação das mensalidades.</p><div class="bar"><input id="q" placeholder="Buscar por nome ou telefone" oninput="listaAlunos()"><button class="btn" onclick="formAluno()">Novo aluno</button></div><div class="box tw" id="tb"></div>'
+ return '<h1>Alunos</h1><p class="sub">Cadastro, planos e situação das mensalidades.</p><div class="bar"><input id="q" placeholder="Buscar por nome ou telefone" oninput="listaAlunos()"><select id="filtroSituacao" class="filter-select" onchange="listaAlunos()"><option value="todos">Todas as situações</option><option value="ok">Em dia</option><option value="vence">Vencem em breve</option><option value="atrasado">Inadimplentes</option></select><button class="btn" onclick="formAluno()">Novo aluno</button></div><div class="box tw" id="tb"></div>'
 };
 function listaAlunos(){
- var q=($('q')||{value:''}).value.toLowerCase(),l=S.alunos.filter(function(a){return (a.nome+(a.tel||'')).toLowerCase().indexOf(q)>-1});
- $('tb').innerHTML=l.length?'<table><tr><th>Nome</th><th>Telefone</th><th>Plano</th><th>Vencimento</th><th>Situação</th><th></th></tr>'+l.map(function(a){return '<tr><td>'+esc(a.nome)+'</td><td>'+esc(a.tel)+'</td><td>'+esc(plano(a.plano).nome)+'</td><td>'+fd(a.venc)+'</td><td>'+tag(a)+'</td><td class="ac"><button class="btn s" onclick="cobrar(\''+a.id+'\')">Cobrar Pix</button><a class="btn s wa" target="_blank" rel="noopener" href="'+zapLink(a)+'">WhatsApp</a><button class="btn s g" onclick="formAluno(\''+a.id+'\')">Editar</button><button class="btn s g d" onclick="delAluno(\''+a.id+'\')">Excluir</button></td></tr>'}).join('')+'</table>':'<p class="empty">Nenhum aluno encontrado. Clique em “Novo aluno” para cadastrar.</p>'
+ var q=($('q')||{value:''}).value.toLowerCase(),f=($('filtroSituacao')||{value:'todos'}).value,
+ l=S.alunos.filter(function(a){return (a.nome+(a.tel||'')).toLowerCase().indexOf(q)>-1&&(f==='todos'||st(a)===f)});
+ $('tb').innerHTML=l.length?'<table><tr><th>Nome</th><th>Telefone</th><th>Plano</th><th>Vencimento</th><th>Situação</th><th></th></tr>'+l.map(function(a){return '<tr><td>'+esc(a.nome)+'</td><td>'+esc(a.tel)+'</td><td>'+esc(plano(a.plano).nome)+'</td><td>'+fd(a.venc)+'</td><td>'+tag(a)+'</td><td class="ac"><button class="btn s" onclick="cobrar(\''+a.id+'\')">Cobrar Pix</button><a class="btn s wa" target="_blank" rel="noopener" href="'+zapLink(a)+'">WhatsApp</a><button class="btn s g" onclick="formAluno(\''+a.id+'\')">Editar</button><button class="btn s g d" onclick="delAluno(\''+a.id+'\')">Excluir</button></td></tr>'}).join('')+'</table>':'<p class="empty">Nenhum aluno encontrado com esses filtros.</p>'
 }
 
 function formAluno(id){
