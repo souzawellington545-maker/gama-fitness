@@ -288,8 +288,8 @@ module.exports = async function handler(req, res) {
       if (!/^[a-zA-Z0-9_-]{6,100}$/.test(paymentId) ||
           !studentId || studentId.length > 100 ||
           !Number.isFinite(amount) || amount <= 0 || amount > 1000000 ||
-          !/^\\d{4}-\\d{2}-\\d{2}$/.test(paidAt) ||
-          (periodEnd && !/^\\d{4}-\\d{2}-\\d{2}$/.test(periodEnd))) {
+          !/^\d{4}-\d{2}-\d{2}$/.test(paidAt) ||
+          (periodEnd && !/^\d{4}-\d{2}-\d{2}$/.test(periodEnd))) {
         return send(res, 400, { error: "Dados do recebimento inválidos." });
       }
       if (!Number.isSafeInteger(expected) || expected < 1) {
