@@ -437,10 +437,22 @@ function delEx(i){
 }
 
 V.financeiro=function(){
- var mes=hoje().slice(0,7),pm=S.pagamentos.filter(function(p){return p.data && p.data.slice(0,7)===mes}).reduce(function(s,p){return s+p.valor},0),
+ var h=hoje(),mes=h.slice(0,7),
+ hojePag=S.pagamentos.filter(function(p){return p.data===h}),
+ diaTotal=hojePag.reduce(function(s,p){return s+(Number(p.valor)||0)},0),
+ mesPag=S.pagamentos.filter(function(p){return p.data && p.data.slice(0,7)===mes}),
+ mesTotal=mesPag.reduce(function(s,p){return s+(Number(p.valor)||0)},0),
  aberto=S.alunos.filter(function(a){return st(a)==='atrasado'}).reduce(function(s,a){return s+plano(a.plano).preco},0),
- tot=S.pagamentos.reduce(function(s,p){return s+p.valor},0),l=S.pagamentos.slice().reverse();
- return '<h1>Financeiro</h1><p class="sub">Entradas e valores em aberto.</p><div class="grid"><div class="box kpi"><small>Recebido neste mês</small><strong>'+R(pm)+'</strong></div><div class="box kpi"><small>Em aberto (inadimplência)</small><strong>'+R(aberto)+'</strong></div><div class="box kpi"><small>Total recebido</small><strong>'+R(tot)+'</strong></div></div><div class="box tw"><h2>Pagamentos recebidos</h2>'+(l.length?'<table><tr><th>Data</th><th>Aluno</th><th>Valor</th></tr>'+l.map(function(p){var a=aluno(p.aluno);return '<tr><td>'+fd(p.data)+'</td><td>'+esc(a?a.nome:'Removido')+'</td><td>'+R(p.valor)+'</td></tr>'}).join('')+'</table>':'<p class="empty">Nenhum pagamento registrado. Use “Receber” na lista de alunos.</p>')+'</div>'
+ tot=S.pagamentos.reduce(function(s,p){return s+(Number(p.valor)||0)},0),
+ l=S.pagamentos.slice().sort(function(a,b){return String(b.data||'').localeCompare(String(a.data||''))});
+ var linhasHoje=hojePag.slice().reverse().map(function(p){var a=aluno(p.aluno);return '<tr><td>'+esc(a?a.nome:'Removido')+'</td><td>'+R(p.valor)+'</td></tr>'}).join('');
+ return '<h1>Financeiro</h1><p class="sub">Acompanhe o dinheiro que entrou hoje e o acumulado.</p>'+
+ '<div class="grid"><div class="box kpi"><small>Entradas de hoje</small><strong>'+R(diaTotal)+'</strong><p class="dash-note">'+hojePag.length+(hojePag.length===1?' recebimento confirmado':' recebimentos confirmados')+'</p></div>'+
+ '<div class="box kpi"><small>Acumulado neste mês</small><strong>'+R(mesTotal)+'</strong><p class="dash-note">Soma dos recebimentos confirmados em '+new Date(h+'T12:00:00').toLocaleDateString('pt-BR',{month:'long',year:'numeric'})+'</p></div>'+
+ '<div class="box kpi"><small>Total acumulado</small><strong>'+R(tot)+'</strong></div>'+
+ '<div class="box kpi"><small>Em aberto (inadimplência)</small><strong>'+R(aberto)+'</strong></div></div>'+
+ '<div class="box tw" style="margin-bottom:14px"><h2>Entradas de hoje · '+fd(h)+'</h2>'+(linhasHoje?'<table><tr><th>Aluno</th><th>Valor recebido</th></tr>'+linhasHoje+'</table>':'<p class="empty">Nenhum recebimento confirmado hoje.</p>')+'</div>'+
+ '<div class="box tw"><h2>Histórico de recebimentos</h2>'+(l.length?'<table><tr><th>Data</th><th>Aluno</th><th>Valor</th></tr>'+l.map(function(p){var a=aluno(p.aluno);return '<tr><td>'+fd(p.data)+'</td><td>'+esc(a?a.nome:'Removido')+'</td><td>'+R(p.valor)+'</td></tr>'}).join('')+'</table>':'<p class="empty">Nenhum pagamento registrado. Use “Receber” na lista de alunos.</p>')+'</div>'
 };
 
 V.planos=function(){
