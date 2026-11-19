@@ -1,0 +1,60 @@
+name: GAMA FITNESS - Backup diário do banco
+
+on:
+  schedule:
+    # 06:00 no horário de Brasília (09:00 UTC)
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Validar conexão Direct
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.PRISMA_DIRECT_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Configure o secret PRISMA_DIRECT_DATABASE_URL nas configurações do GitHub."
+            exit 1
+          fi
+          if [[ "$DATABASE_URL" != postgres://*@db.prisma.io:5432/* && "$DATABASE_URL" != postgresql://*@db.prisma.io:5432/* ]]; then
+            echo "::error::A conexão precisa ser Direct, com host db.prisma.io e porta 5432."
+            exit 1
+          fi
+
+      - name: Exportar banco Prisma Postgres
+        shell: bash
+        env:
+          DATABASE_URL: ${{ secrets.PRISMA_DIRECT_DATABASE_URL }}
+        run: |
+          mkdir -p backups
+          docker run --rm \
+            -e DATABASE_URL \
+            -v "$PWD/backups:/backups" \
+            postgres:17 \
+            sh -ceu 'pg_dump --dbname="$DATABASE_URL" --format=custom --no-owner --no-acl --schema=public --file="/backups/GAMA-FITNESS-$(date -u +%Y%m%d-%H%M%S).backup"'
+          test -s backups/*.backup
+
+      - name: Validar arquivo de backup
+        shell: bash
+        run: |
+          file=$(find backups -maxdepth 1 -name '*.backup' -type f -print -quit)
+          test -n "$file"
+          docker run --rm -v "$PWD/backups:/backups" postgres:17 pg_restore --list "/backups/$(basename "$file")" > /tmp/backup-list.txt
+          grep -q 'TABLE DATA public' /tmp/backup-list.txt
+          echo "Arquivo criado e estrutura de dados reconhecida."
+          ls -lh "$file"
+
+      - name: Guardar backup por 90 dias
+        uses: actions/upload-artifact@v4
+        with:
+          name: gama-fitness-database-backup-${{ github.run_number }}
+          path: backups/*.backup
+          if-no-files-found: error
+          retention-days: 90
