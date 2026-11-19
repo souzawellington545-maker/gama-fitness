@@ -61,6 +61,45 @@
     });
   }
 
+  // Registra recebimentos na rota financeira dedicada. O estado completo é
+  // enviado junto para preservar alterações locais e a versão é atualizada
+  // somente após a confirmação transacional do servidor.
+  window.gamaRegisterPayment = function (payment, state) {
+    if (!ready || syncBlocked) {
+      return Promise.reject(new Error("A sincronização não está pronta. Atualize a página."));
+    }
+    return api("action=payment", {
+      method: "POST",
+      body: JSON.stringify({
+        payment: payment,
+        state: state || localState(),
+        expectedVersion: cloudVersion
+      })
+    }).then(function (data) {
+      if (!validState(data.state)) throw new Error("O servidor retornou dados financeiros inválidos.");
+      applyState(data.state);
+      cloudVersion = data.version;
+      pending = false;
+      return data;
+    }).catch(function (error) {
+      if (error.status === 409) {
+        syncBlocked = true;
+        pending = false;
+        try {
+          localStorage.setItem(conflictKey, JSON.stringify({
+            format: "gama-fitness-local-conflict",
+            savedAt: new Date().toISOString(),
+            cloudVersion: cloudVersion,
+            state: localState()
+          }));
+        } catch (backupError) {
+          console.error("GAMA backup de conflito financeiro:", backupError);
+        }
+      }
+      throw error;
+    });
+  };
+
   function showGate(message) {
     var old = document.getElementById("gama-cloud-gate");
     if (old) old.remove();
