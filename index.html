@@ -286,14 +286,24 @@ V.painel=function(){
    return {chave:chave,nome:d.toLocaleDateString('pt-BR',{month:'short'}).replace('.',''),n:S.pagamentos.filter(function(p){return p.data && p.data.slice(0,7)===chave}).reduce(function(t,p){return t+(Number(p.valor)||0)},0)};
  }).reverse(),
  mx=Math.max.apply(null,meses.map(function(x){return x.n}).concat([1])),
- prox=S.alunos.filter(function(a){return st(a)!=='ok'}).sort(function(a,b){return a.venc<b.venc?-1:1});
+ alertas=S.alunos.map(function(a){
+   var situacao=st(a),historico=S.checkins.filter(function(c){return c.aluno===a.id}).sort(function(x,y){return x.dia<y.dia?1:(x.dia>y.dia?-1:0)}),
+   ultimo=historico[0],diasSem=ultimo?Math.floor((new Date(h+'T12:00:00')-new Date(ultimo.dia+'T12:00:00'))/86400000):null,
+   motivos=[];
+   if(situacao==='atrasado')motivos.push('Mensalidade atrasada desde '+fd(a.venc));
+   else if(situacao==='vence')motivos.push('Mensalidade vence em '+fd(a.venc));
+   if(diasSem===null)motivos.push('Ainda sem check-in registrado');
+   else if(diasSem>=7)motivos.push('Sem frequência há '+diasSem+' dias');
+   return {aluno:a,motivos:motivos,prioridade:situacao==='atrasado'?0:(situacao==='vence'?1:2),ultimo:ultimo};
+ }).filter(function(x){return x.motivos.length>0}).sort(function(a,b){return a.prioridade-b.prioridade || a.aluno.nome.localeCompare(b.aluno.nome,'pt-BR')});
  return '<h1>Painel</h1><p class="sub">Resumo de hoje, '+fd(h)+'</p>'+
  '<div class="dash-actions"><a class="btn" href="#alunos">+ Novo aluno / Alunos</a><a class="btn g" href="#checkin">Registrar check-in</a><a class="btn g" href="#financeiro">Ver financeiro</a></div>'+
  '<div class="grid"><div class="box kpi"><small>Alunos sem mensalidade vencida</small><strong>'+at+'</strong></div><div class="box kpi"><small>Receita recebida no mês</small><strong>'+R(rec)+'</strong></div><div class="box kpi"><small>Mensalidades vencidas</small><strong>'+inad+'</strong></div><div class="box kpi"><small>Check-ins hoje</small><strong>'+hj+'</strong></div></div>'+
  '<div class="grid"><div class="box kpi"><small>Vencem nos próximos 5 dias</small><strong>'+breve+'</strong></div><div class="box kpi"><small>Total de alunos cadastrados</small><strong>'+S.alunos.length+'</strong></div></div>'+
  '<div class="box dash-section"><h2>Receita dos últimos 6 meses</h2><div class="bars">'+meses.map(function(x){return '<div><span>'+R(x.n)+'</span><i style="height:'+(x.n/mx*100)+'%"></i>'+esc(x.nome)+'</div>'}).join('')+'</div><p class="dash-note">Valores calculados a partir dos pagamentos registrados no sistema.</p></div>'+
  '<div class="box dash-section"><h2>Frequência dos últimos 7 dias</h2><div class="bars">'+dias.map(function(x){return '<div><span>'+x.n+'</span><i style="height:'+(x.n/mxCheck*100)+'%"></i>'+sem[new Date(x.d+'T12:00:00').getDay()]+'</div>'}).join('')+'</div></div>'+
- '<div class="box dash-section"><h2>Vencimentos que precisam de atenção</h2>'+(prox.length?'<div class="tw"><table><tr><th>Aluno</th><th>Vencimento</th><th>Situação</th><th></th></tr>'+prox.map(function(a){return '<tr><td>'+esc(a.nome)+'</td><td>'+fd(a.venc)+'</td><td>'+tag(a)+'</td><td><a class="btn s wa" target="_blank" rel="noopener" href="'+zapLink(a)+'">Cobrar</a></td></tr>'}).join('')+'</table></div>':'<p class="empty">Nenhuma mensalidade próxima do vencimento ou atrasada.</p>')+'</div>';
+ '<div class="box dash-section"><h2>Acompanhamento de alunos</h2><p class="dash-note">Alunos que precisam de atenção: mensalidade atrasada ou próxima do vencimento, ou ausência de check-in por 7 dias ou mais.</p>'+
+ (alertas.length?'<div class="tw"><table><tr><th>Aluno</th><th>Atenção</th><th>Último check-in</th><th></th></tr>'+alertas.map(function(x){return '<tr><td>'+esc(x.aluno.nome)+'</td><td>'+x.motivos.map(function(m){return '<span class="tag '+(x.prioridade===0?'atrasado':(x.prioridade===1?'vence':'ok'))+'">'+esc(m)+'</span>'}).join(' ')+'</td><td>'+(x.ultimo?fd(x.ultimo.dia):'Nunca registrado')+'</td><td>'+(x.aluno.tel?'<a class="btn s wa" target="_blank" rel="noopener" href="'+zapAcompanhamento(x.aluno,x.motivos)+'">Chamar</a>':'<span class="dash-note">Sem telefone</span>')+'</td></tr>'}).join('')+'</table></div>':'<p class="empty">Nenhum aluno precisa de atenção neste momento.</p>')+'</div>';
 };
 
 V.alunos=function(){
@@ -454,6 +464,12 @@ function zapLink(a){
  var p=plano(a.plano),s=st(a),code=pixCode(p.preco,txid(a));
  var m='Olá, '+a.nome.split(' ')[0]+'! Aqui é da '+S.cfg.nome+'. Sua mensalidade do plano '+p.nome+(s==='atrasado'?' venceu em ':' vence em ')+fd(a.venc)+'. Valor: '+R(p.preco)+'.'+(code?'\n\nPague pelo Pix copia e cola:\n'+code:'')+'\n\nDepois de pagar, envie o comprovante por aqui. Obrigado!';
  return 'https://wa.me/'+zapNum(a.tel)+'?text='+encodeURIComponent(m)
+}
+
+function zapAcompanhamento(a,motivos){
+ var nome=String(a.nome||'').trim().split(/\s+/)[0]||'aluno',
+ texto='Olá, '+nome+'! Aqui é da '+S.cfg.nome+'. Estamos entrando em contato para acompanhar você: '+motivos.join('; ')+'. Podemos ajudar em alguma coisa? Conte com a gente!';
+ return 'https://wa.me/'+zapNum(a.tel)+'?text='+encodeURIComponent(texto)
 }
 
 function cobrar(id){
