@@ -415,7 +415,7 @@ function listaEntradasHojeHtml(dia){
  if(!lista.length)return '<p class="empty">Nenhuma entrada registrada hoje.</p>';
  return '<table><tr><th>Horário</th><th>Aluno</th><th>Correção</th></tr>'+lista.map(function(c){
    var a=aluno(c.aluno);
-   return '<tr><td>'+esc(c.hora)+'</td><td>'+esc(a?a.nome:'Removido')+'</td><td>'+(a?'<button type="button" class="btn s g d" onclick="desfazerCheckin(\\''+c.id+'\\')">Desfazer</button>':'–')+'</td></tr>';
+   return '<tr><td>'+esc(c.hora)+'</td><td>'+esc(a?a.nome:'Removido')+'</td><td>'+(a?'<button type="button" class="btn s g d" onclick="desfazerCheckin(&quot;'+c.id+'&quot;)">Desfazer</button>':'–')+'</td></tr>';
  }).join('')+'</table>';
 }
 
