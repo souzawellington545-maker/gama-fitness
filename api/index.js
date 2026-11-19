@@ -93,6 +93,40 @@ async function ensureTable() {
     )
   `);
   await pool.query(`ALTER TABLE gama_fitness_state ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 1`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS gama_fitness_payments (
+      payment_id TEXT PRIMARY KEY,
+      student_id TEXT NOT NULL,
+      amount NUMERIC(12,2) NOT NULL CHECK (amount > 0),
+      paid_at DATE NOT NULL,
+      period_end DATE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  // Migra os recebimentos que já existem no estado JSON para o livro financeiro,
+  // sem duplicar lançamentos e sem alterar os dados originais.
+  await pool.query(`
+    INSERT INTO gama_fitness_payments
+      (payment_id, student_id, amount, paid_at, period_end)
+    SELECT
+      p->>'id',
+      p->>'aluno',
+      COALESCE(NULLIF(p->>'valor', '')::numeric, 0),
+      NULLIF(p->>'data', '')::date,
+      NULLIF(p->>'periodoAte', '')::date
+    FROM gama_fitness_state s
+    CROSS JOIN LATERAL jsonb_array_elements(
+      CASE WHEN jsonb_typeof(s.payload->'pagamentos') = 'array'
+        THEN s.payload->'pagamentos' ELSE '[]'::jsonb END
+    ) p
+    WHERE p->>'id' IS NOT NULL
+      AND p->>'aluno' IS NOT NULL
+      AND COALESCE(NULLIF(p->>'valor', '')::numeric, 0) > 0
+      AND NULLIF(p->>'data', '') IS NOT NULL
+    ON CONFLICT (payment_id) DO NOTHING
+  `);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS gama_login_limits (
       ip_hash TEXT PRIMARY KEY,
@@ -232,6 +266,111 @@ module.exports = async function handler(req, res) {
       );
 
       return res.end(JSON.stringify(backup, null, 2));
+    }
+
+
+    // RECEBIMENTO: registra o pagamento e atualiza o estado na mesma transação.
+    if (req.method === "POST" && action === "payment") {
+      const body = await readBody(req);
+      const state = body.state;
+      const payment = body.payment || {};
+      const expected = body.expectedVersion;
+      const paymentId = String(payment.id || "");
+      const studentId = String(payment.aluno || "");
+      const amount = Number(payment.valor);
+      const paidAt = String(payment.data || "");
+      const periodEnd = payment.periodoAte ? String(payment.periodoAte) : null;
+
+      if (!state || typeof state !== "object" || Array.isArray(state) ||
+          !Array.isArray(state.alunos) || !Array.isArray(state.pagamentos)) {
+        return send(res, 400, { error: "Estado financeiro inválido." });
+      }
+      if (!/^[a-zA-Z0-9_-]{6,100}$/.test(paymentId) ||
+          !studentId || studentId.length > 100 ||
+          !Number.isFinite(amount) || amount <= 0 || amount > 1000000 ||
+          !/^\\d{4}-\\d{2}-\\d{2}$/.test(paidAt) ||
+          (periodEnd && !/^\\d{4}-\\d{2}-\\d{2}$/.test(periodEnd))) {
+        return send(res, 400, { error: "Dados do recebimento inválidos." });
+      }
+      if (!Number.isSafeInteger(expected) || expected < 1) {
+        return send(res, 400, { error: "Versão dos dados inválida." });
+      }
+
+      const student = state.alunos.find(a => String(a.id) === studentId);
+      if (!student) return send(res, 404, { error: "Aluno não encontrado." });
+
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const current = await client.query(
+          "SELECT payload, version FROM gama_fitness_state WHERE id = $1 FOR UPDATE",
+          ["main"]
+        );
+        if (!current.rowCount) {
+          await client.query("ROLLBACK");
+          return send(res, 409, { error: "O banco ainda não foi inicializado. Atualize a página." });
+        }
+        if (Number(current.rows[0].version) !== expected) {
+          await client.query("ROLLBACK");
+          return send(res, 409, { error: "Os dados foram alterados em outro aparelho. Atualize antes de registrar o pagamento." });
+        }
+
+        const duplicate = await client.query(
+          "SELECT payment_id FROM gama_fitness_payments WHERE payment_id = $1",
+          [paymentId]
+        );
+        if (duplicate.rowCount) {
+          await client.query("ROLLBACK");
+          return send(res, 409, { error: "Este recebimento já foi registrado. Atualize a página para conferir." });
+        }
+
+        const existsInState = state.pagamentos.some(p => String(p.id) === paymentId);
+        if (existsInState) {
+          await client.query("ROLLBACK");
+          return send(res, 409, { error: "Este recebimento já consta no histórico. Atualize a página." });
+        }
+
+        state.pagamentos.push({
+          id: paymentId,
+          aluno: studentId,
+          valor: Number(amount.toFixed(2)),
+          data: paidAt,
+          periodoAte: periodEnd
+        });
+        student.venc = periodEnd || student.venc;
+        if (periodEnd) student.pagoAte = periodEnd;
+
+        const updated = await client.query(
+          `UPDATE gama_fitness_state
+           SET payload = $2::jsonb, updated_at = NOW(), version = version + 1
+           WHERE id = $1 AND version = $3
+           RETURNING version, updated_at`,
+          ["main", JSON.stringify(state), expected]
+        );
+        if (!updated.rowCount) {
+          await client.query("ROLLBACK");
+          return send(res, 409, { error: "Os dados foram alterados em outro aparelho. Atualize antes de registrar o pagamento." });
+        }
+
+        await client.query(
+          `INSERT INTO gama_fitness_payments
+            (payment_id, student_id, amount, paid_at, period_end)
+           VALUES ($1, $2, $3, $4::date, $5::date)`,
+          [paymentId, studentId, amount, paidAt, periodEnd]
+        );
+        await client.query("COMMIT");
+        return send(res, 200, {
+          ok: true,
+          state,
+          version: Number(updated.rows[0].version),
+          payment: { id: paymentId, aluno: studentId, valor: Number(amount.toFixed(2)), data: paidAt, periodoAte: periodEnd }
+        });
+      } catch (error) {
+        await client.query("ROLLBACK").catch(() => {});
+        throw error;
+      } finally {
+        client.release();
+      }
     }
 
     if (req.method === "GET" && action === "state") {
