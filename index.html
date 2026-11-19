@@ -467,7 +467,7 @@ function zapLink(a){
 }
 
 function zapAcompanhamento(a,motivos){
- var nome=String(a.nome||'').trim().split(/\\s+/)[0]||'tudo bem',
+ var nome=String(a.nome||'').trim().split(/\s+/)[0]||'aluno',
  texto='Olá, '+nome+'! Aqui é da '+S.cfg.nome+'. Estamos entrando em contato para acompanhar você: '+motivos.join('; ')+'. Podemos ajudar em alguma coisa? Conte com a gente!';
  return 'https://wa.me/'+zapNum(a.tel)+'?text='+encodeURIComponent(texto)
 }
