@@ -258,7 +258,7 @@ var $=function(i){return document.getElementById(i)};
 var dlg=$('dlg');
 function open(html){dlg.innerHTML=html;dlg.showModal()}
 
-var ROTAS=[['painel','Painel'],['alunos','Alunos'],['checkin','Check-in'],['aulas','Aulas'],['treinos','Treinos'],['financeiro','Financeiro'],['planos','Planos'],['config','Configurações']];
+var ROTAS=[['painel','Painel'],['alunos','Alunos'],['checkin','Check-in'],['aulas','Aulas'],['financeiro','Financeiro'],['planos','Planos'],['config','Configurações']];
 function nav(r){$('nav').innerHTML='<div class="logo">gama<b>fitness</b></div>'+ROTAS.map(function(x){return '<a href="#'+x[0]+'" class="'+(x[0]===r?'on':'')+'">'+x[1]+'</a>'}).join('')+'<div class="sp"></div><a href="#" onclick="return tema()">Alternar tema</a>'}
 function tema(){
   var r=document.documentElement;
