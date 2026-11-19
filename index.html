@@ -205,6 +205,11 @@ main:has(.dash-actions) .dash-section .btn.s{border-radius:7px}
  main:has(.dash-actions) *{transition:none!important}
 }
 
+
+.checkin-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:7px;margin-top:12px}
+.checkin-list button{min-width:0;gap:8px}
+.checkin-list button:disabled{cursor:not-allowed}
+@media(max-width:520px){.checkin-list{grid-template-columns:1fr}.checkin-list .tag{font-size:10px}}
 </style>
 </head>
 <body>
@@ -366,22 +371,46 @@ function receber(id){
 }
 
 V.checkin=function(){
- var h=hoje(),l=S.checkins.filter(function(c){return c.dia===h}).reverse();
- return '<h1>Check-in</h1><p class="sub">Registre a entrada do aluno pelo nome ou código.</p><div class="box ci"><h2>Quem está chegando?</h2><input id="cq" placeholder="Nome do aluno" list="dl" autocomplete="off" onkeydown="if(event.key===\'Enter\')fazCheckin()"><datalist id="dl">'+S.alunos.map(function(a){return '<option value="'+esc(a.nome)+'">'}).join('')+'</datalist><br><button class="btn" onclick="fazCheckin()">Liberar acesso</button><div id="rs"></div></div><div class="box tw" style="margin-top:14px"><h2>Entradas de hoje</h2>'+(l.length?'<table>'+l.map(function(c){var a=aluno(c.aluno);return '<tr><td>'+c.hora+'</td><td>'+esc(a?a.nome:'Removido')+'</td></tr>'}).join('')+'</table>':'<p class="empty">Nenhuma entrada registrada hoje.</p>')+'</div>'
+ var h=hoje(),l=S.checkins.filter(function(c){return c.dia===h}).slice().reverse();
+ return '<h1>Check-in rápido</h1><p class="sub">Encontre o aluno e registre a entrada com um toque, sem digitar o nome completo.</p>'+
+ '<div class="box" style="margin-bottom:14px"><label for="cq">Buscar aluno</label><input id="cq" placeholder="Digite parte do nome..." autocomplete="off" oninput="filtrarCheckin()"><p class="dash-note">Toque no nome do aluno para liberar a entrada.</p><div id="checkin-list" class="checkin-list">'+listaCheckinHtml('')+'</div><div id="rs" aria-live="polite"></div></div>'+
+ '<div class="box tw"><h2>Entradas de hoje · '+fd(h)+'</h2>'+(l.length?'<table><tr><th>Horário</th><th>Aluno</th></tr>'+l.map(function(c){var a=aluno(c.aluno);return '<tr><td>'+esc(c.hora)+'</td><td>'+esc(a?a.nome:'Removido')+'</td></tr>'}).join('')+'</table>':'<p class="empty">Nenhuma entrada registrada hoje.</p>')+'</div>'
 };
 
-function fazCheckin(){
- var q=$('cq').value.trim().toLowerCase(),r=$('rs');if(!q)return;
- var m=S.alunos.filter(function(a){return a.nome.toLowerCase().indexOf(q)>-1});
- if(m.length!==1){r.innerHTML='<div class="res atrasado">'+(m.length?'Mais de um aluno encontrado. Digite o nome completo.':'Aluno não encontrado. Confira o nome.')+'</div>';return}
- var a=m[0];
- if(st(a)==='atrasado'){r.innerHTML='<div class="res atrasado"><big>Acesso bloqueado</big>Mensalidade vencida em '+fd(a.venc)+'. Receba o pagamento em Alunos.</div>';return}
+function listaCheckinHtml(q){
+ q=String(q||'').trim().toLocaleLowerCase('pt-BR');
+ var h=hoje(),lista=S.alunos.filter(function(a){return String(a.nome||'').toLocaleLowerCase('pt-BR').indexOf(q)>-1});
+ if(!lista.length)return '<p class="empty">Nenhum aluno encontrado.</p>';
+ return lista.sort(function(a,b){return String(a.nome).localeCompare(String(b.nome),'pt-BR')}).map(function(a){
+   var fez=S.checkins.some(function(c){return c.aluno===a.id&&c.dia===h}),bloq=st(a)==='atrasado';
+   return '<button type="button" class="btn '+(fez?'g':'')+'" '+(fez||bloq?'disabled':'')+' onclick="registrarCheckinAluno(\''+a.id+'\')" style="width:100%;display:flex;justify-content:space-between;align-items:center;text-align:left;margin:5px 0;padding:13px 14px;opacity:'+(fez||bloq?'.68':'1')+'"><span>'+esc(a.nome)+'</span><span class="tag '+(fez?'ok':bloq?'atrasado':'')+'">'+(fez?'Já entrou hoje':bloq?'Mensalidade atrasada':'Registrar entrada')+'</span></button>'
+ }).join('');
+}
+
+function filtrarCheckin(){
+ var q=$('cq').value;
+ $('checkin-list').innerHTML=listaCheckinHtml(q);
+}
+
+function registrarCheckinAluno(id){
+ var a=aluno(id),r=$('rs'),h=hoje();
+ if(!a){toast('Aluno não encontrado');return}
+ if(S.checkins.some(function(c){return c.aluno===id&&c.dia===h})){
+   r.innerHTML='<div class="res ok"><big>Check-in já registrado</big>'+esc(a.nome)+' já teve a entrada registrada hoje.</div>';return;
+ }
+ if(st(a)==='atrasado'){
+   r.innerHTML='<div class="res atrasado"><big>Acesso bloqueado</big>Mensalidade vencida em '+fd(a.venc)+'. Receba o pagamento em Alunos.</div>';return;
+ }
  var d=new Date(),hh=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
- var novoCheckin={id:uid(),aluno:a.id,dia:hoje(),hora:hh};
- S.checkins.push(novoCheckin);
+ S.checkins.push({id:uid(),aluno:id,dia:h,hora:hh});
  salvarTudo();
  r.innerHTML='<div class="res ok"><big>Acesso liberado</big>'+esc(a.nome)+' · '+hh+(st(a)==='vence'?'<br>Atenção: vence em '+fd(a.venc):'')+'</div>';
- setTimeout(go,1800)
+ $('checkin-list').innerHTML=listaCheckinHtml($('cq').value);
+ var tabela=document.querySelector('#v .box.tw');
+ if(tabela){
+   var hojeLista=S.checkins.filter(function(c){return c.dia===h}).slice().reverse();
+   tabela.innerHTML='<h2>Entradas de hoje · '+fd(h)+'</h2>'+(hojeLista.length?'<table><tr><th>Horário</th><th>Aluno</th></tr>'+hojeLista.map(function(c){var x=aluno(c.aluno);return '<tr><td>'+esc(c.hora)+'</td><td>'+esc(x?x.nome:'Removido')+'</td></tr>'}).join('')+'</table>':'<p class="empty">Nenhuma entrada registrada hoje.</p>');
+ }
 }
 
 V.aulas=function(){
