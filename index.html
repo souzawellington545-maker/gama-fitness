@@ -254,9 +254,9 @@ var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){re
 var uid=function(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5)};
 
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.className='on';clearTimeout(toast.t);toast.t=setTimeout(function(){t.className=''},2200)}
-function st(a){var h=hoje();return a.venc<h?'atrasado':(a.venc<=addD(h,5)?'vence':'ok')}
-var STL={ok:'Em dia',vence:'Vence em breve',atrasado:'Inadimplente'};
-function tag(a){var s=st(a);return '<span class="tag '+s+'">'+STL[s]+'</span>'}
+function st(a){var h=hoje();if(a.pagoAte&&a.pagoAte>=h)return 'pago';return a.venc<h?'atrasado':(a.venc<=addD(h,5)?'vence':'ok')}
+var STL={pago:'Pago',ok:'Em dia',vence:'Vence em breve',atrasado:'Inadimplente'};
+function tag(a){var s=st(a),classe=s==='pago'?'ok':s;return '<span class="tag '+classe+'">'+STL[s]+'</span>'}
 var plano=function(id){return S.planos.filter(function(p){return p.id===id})[0]||{nome:'–',preco:0,meses:1}};
 var aluno=function(id){return S.alunos.filter(function(a){return a.id===id})[0]};
 var $=function(i){return document.getElementById(i)};
@@ -312,7 +312,7 @@ V.painel=function(){
 };
 
 V.alunos=function(){
- return '<h1>Alunos</h1><p class="sub">Cadastro, planos e situação das mensalidades.</p><div class="bar"><input id="q" placeholder="Buscar por nome ou telefone" oninput="listaAlunos()"><select id="filtroSituacao" class="filter-select" onchange="listaAlunos()"><option value="todos">Todas as situações</option><option value="ok">Em dia</option><option value="vence">Vencem em breve</option><option value="atrasado">Inadimplentes</option></select><button class="btn" onclick="formAluno()">Novo aluno</button></div><div class="box tw" id="tb"></div>'
+ return '<h1>Alunos</h1><p class="sub">Cadastro, planos e situação das mensalidades.</p><div class="bar"><input id="q" placeholder="Buscar por nome ou telefone" oninput="listaAlunos()"><select id="filtroSituacao" class="filter-select" onchange="listaAlunos()"><option value="todos">Todas as situações</option><option value="pago">Pago</option><option value="ok">Em dia</option><option value="vence">Vencem em breve</option><option value="atrasado">Inadimplentes</option></select><button class="btn" onclick="formAluno()">Novo aluno</button></div><div class="box tw" id="tb"></div>'
 };
 function listaAlunos(){
  var q=($('q')||{value:''}).value.toLowerCase(),f=($('filtroSituacao')||{value:'todos'}).value,
@@ -350,9 +350,10 @@ function delAluno(id){
 function receber(id){
  var a=aluno(id),p=plano(a.plano),base=a.venc>hoje()?a.venc:hoje();
  var novoVenc=addM(base,p.meses);
- var novoPg={id:uid(),aluno:id,valor:p.preco,data:hoje()};
+ var novoPg={id:uid(),aluno:id,valor:p.preco,data:hoje(),periodoAte:novoVenc};
  S.pagamentos.push(novoPg);
  a.venc=novoVenc;
+ a.pagoAte=novoVenc;
  salvarTudo();toast('Pagamento de '+R(p.preco)+' recebido');go();
 }
 
