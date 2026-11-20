@@ -326,7 +326,7 @@ V.alunos=function(){
 function listaAlunos(){
  var q=($('q')||{value:''}).value.toLowerCase(),f=($('filtroSituacao')||{value:'ativos'}).value,
  l=S.alunos.filter(function(a){var corresponde=f==='todos'||(f==='ativos'&&alunoAtivo(a))||(f==='inativos'&&!alunoAtivo(a))||(['pago','ok','vence','atrasado'].indexOf(f)>-1&&alunoAtivo(a)&&st(a)===f);return corresponde&&(a.nome+(a.tel||'')).toLowerCase().indexOf(q)>-1});
- $('tb').innerHTML=l.length?'<table><tr><th>Nome</th><th>Telefone</th><th>Plano</th><th>Vencimento</th><th>Situação</th><th>Ações</th></tr>'+l.map(function(a){var status=alunoAtivo(a)?tag(a):'<span class="tag">Desativado</span>';var acoes=alunoAtivo(a)?'<button class="btn s" onclick="cobrar(\\''+a.id+'\\')">Cobrar Pix</button><button class="btn s g" onclick="if(confirm(\\'Confirmar recebimento da mensalidade?\\'))receber(\\''+a.id+'\\')">Receber</button><a class="btn s wa" target="_blank" rel="noopener" href="'+zapLink(a)+'">WhatsApp</a><button class="btn s g" onclick="formAluno(\\''+a.id+'\\')">Editar</button>':'<span class="dash-note">Aluno desativado</span>';return '<tr><td>'+esc(a.nome)+'</td><td>'+esc(a.tel)+'</td><td>'+esc(plano(a.plano).nome)+'</td><td>'+fd(a.venc)+'</td><td>'+status+'</td><td class="ac student-actions">'+acoes+'<button class="btn s g" aria-label="Mais opções para '+esc(a.nome)+'" onclick="opcoesAluno(\\''+a.id+'\\')">⋮ Mais opções</button></td></tr>'}).join('')+'</table>':'<p class="empty">Nenhum aluno encontrado com esses filtros.</p>'
+ $('tb').innerHTML=l.length?'<table><tr><th>Nome</th><th>Telefone</th><th>Plano</th><th>Vencimento</th><th>Situação</th><th>Ações</th></tr>'+l.map(function(a){var status=alunoAtivo(a)?tag(a):'<span class="tag">Desativado</span>';var acoes=alunoAtivo(a)?'<button class="btn s" onclick="cobrar(\''+a.id+'\')">Cobrar Pix</button><button class="btn s g" onclick="if(confirm(\'Confirmar recebimento da mensalidade?\'))receber(\''+a.id+'\')">Receber</button><a class="btn s wa" target="_blank" rel="noopener" href="'+zapLink(a)+'">WhatsApp</a><button class="btn s g" onclick="formAluno(\''+a.id+'\')">Editar</button>':'<span class="dash-note">Aluno desativado</span>';return '<tr><td>'+esc(a.nome)+'</td><td>'+esc(a.tel)+'</td><td>'+esc(plano(a.plano).nome)+'</td><td>'+fd(a.venc)+'</td><td>'+status+'</td><td class="ac student-actions">'+acoes+'<button class="btn s g" aria-label="Mais opções para '+esc(a.nome)+'" onclick="opcoesAluno(\''+a.id+'\')">⋮ Mais opções</button></td></tr>'}).join('')+'</table>':'<p class="empty">Nenhum aluno encontrado com esses filtros.</p>'
 }
 
 function formAluno(id){
@@ -351,8 +351,8 @@ function opcoesAluno(id){
  var a=aluno(id);if(!a)return;
  var ativo=alunoAtivo(a);
  open('<h2>Mais opções · '+esc(a.nome)+'</h2><p class="sub">Gerencie a situação deste aluno sem perder o histórico.</p>'+
- (ativo?'<div class="box" style="margin:12px 0"><b>Desativar aluno</b><p class="dash-note">O aluno sai das listas de check-in, reservas e cobranças. Pagamentos, check-ins, aulas e ficha de treino permanecem guardados.</p><button class="btn g" onclick="desativarAluno(\\''+id+'\\')">Desativar aluno</button></div>':'<div class="box" style="margin:12px 0"><b>Aluno desativado</b><p class="dash-note">O histórico está preservado. Reative para voltar a usar check-in, reservas e cobranças.</p><button class="btn" onclick="reativarAluno(\\''+id+'\\')">Reativar aluno</button></div>')+
- '<div style="border-top:1px solid var(--ln);padding-top:14px;margin-top:16px"><b style="color:var(--er)">Zona de exclusão</b><p class="dash-note">A exclusão definitiva apaga o cadastro e os registros vinculados. Prefira desativar para preservar o histórico.</p><button class="btn s g d" onclick="confirmarExclusaoAluno(\\''+id+'\\')">Excluir definitivamente…</button></div><div class="bar" style="margin-top:18px;justify-content:flex-end"><button class="btn g" onclick="dlg.close()">Fechar</button></div>');
+ (ativo?'<div class="box" style="margin:12px 0"><b>Desativar aluno</b><p class="dash-note">O aluno sai das listas de check-in, reservas e cobranças. Pagamentos, check-ins, aulas e ficha de treino permanecem guardados.</p><button class="btn g" onclick="desativarAluno(\''+id+'\')">Desativar aluno</button></div>':'<div class="box" style="margin:12px 0"><b>Aluno desativado</b><p class="dash-note">O histórico está preservado. Reative para voltar a usar check-in, reservas e cobranças.</p><button class="btn" onclick="reativarAluno(\''+id+'\')">Reativar aluno</button></div>')+
+ '<div style="border-top:1px solid var(--ln);padding-top:14px;margin-top:16px"><b style="color:var(--er)">Zona de exclusão</b><p class="dash-note">A exclusão definitiva apaga o cadastro e os registros vinculados. Prefira desativar para preservar o histórico.</p><button class="btn s g d" onclick="confirmarExclusaoAluno(\''+id+'\')">Excluir definitivamente…</button></div><div class="bar" style="margin-top:18px;justify-content:flex-end"><button class="btn g" onclick="dlg.close()">Fechar</button></div>');
 }
 function desativarAluno(id){
  var a=aluno(id);if(!a)return;
@@ -365,7 +365,7 @@ function reativarAluno(id){
 }
 function confirmarExclusaoAluno(id){
  var a=aluno(id);if(!a)return;
- open('<h2 style="color:var(--er)">Excluir definitivamente</h2><p>Esta ação apaga o cadastro de <b>'+esc(a.nome)+'</b> e remove seus pagamentos, check-ins e reservas. Não poderá ser desfeita pelo sistema.</p><p class="dash-note">Para confirmar, digite exatamente o nome do aluno:</p><input id="confirmar-exclusao-aluno" autocomplete="off" placeholder="'+esc(a.nome)+'"><div class="bar" style="margin-top:18px;justify-content:flex-end"><button class="btn g" onclick="opcoesAluno(\\''+id+'\\')">Voltar</button><button class="btn g d" onclick="delAluno(\\''+id+'\\')">Excluir permanentemente</button></div>');
+ open('<h2 style="color:var(--er)">Excluir definitivamente</h2><p>Esta ação apaga o cadastro de <b>'+esc(a.nome)+'</b> e remove seus pagamentos, check-ins e reservas. Não poderá ser desfeita pelo sistema.</p><p class="dash-note">Para confirmar, digite exatamente o nome do aluno:</p><input id="confirmar-exclusao-aluno" autocomplete="off" placeholder="'+esc(a.nome)+'"><div class="bar" style="margin-top:18px;justify-content:flex-end"><button class="btn g" onclick="opcoesAluno(\''+id+'\')">Voltar</button><button class="btn g d" onclick="delAluno(\''+id+'\')">Excluir permanentemente</button></div>');
 }
 function delAluno(id){
  var a=aluno(id);if(!a)return;
@@ -380,7 +380,7 @@ function delAluno(id){
 
 function receber(id){
  var a=aluno(id);
- if(!a){toast('Aluno não encontrado');return}
+ if(!a||!alunoAtivo(a)){toast('Aluno não encontrado ou desativado.');return}
  var p=plano(a.plano),base=a.venc>hoje()?a.venc:hoje();
  var novoVenc=addM(base,p.meses);
  var novoPg={id:uid(),aluno:id,valor:p.preco,data:hoje(),periodoAte:novoVenc};
@@ -457,7 +457,7 @@ function desfazerCheckin(id){
 }
 
 V.aulas=function(){
- return '<h1>Aulas</h1><p class="sub">Grade semanal e reservas de vagas.</p><div class="bar"><button class="btn" onclick="formAula()">Nova aula</button></div><div class="cls">'+(S.aulas.length?S.aulas.map(function(c){var ins=c.ins||[];var p=ins.length/c.vagas*100;return '<div class="box"><h3>'+esc(c.nome)+'</h3><p>'+esc(c.dia)+' às '+esc(c.hora)+'</p><div class="meter"><i style="width:'+p+'%"></i></div><small>'+ins.length+' de '+c.vagas+' vagas ocupadas</small><div class="ac" style="margin-top:10px"><button class="btn s" onclick="reservar(\''+c.id+'\')">Reservar</button><button class="btn s g d" onclick="delAula(\''+c.id+'\')">Excluir</button></div></div>'}).join(''):'<p class="empty">Nenhuma aula cadastrada.</p>')+'</div>'
+ return '<h1>Aulas</h1><p class="sub">Grade semanal e reservas de vagas.</p><div class="bar"><button class="btn" onclick="formAula()">Nova aula</button></div><div class="cls">'+(S.aulas.length?S.aulas.map(function(c){var ins=(c.ins||[]).filter(function(id){var a=aluno(id);return a&&alunoAtivo(a)});var p=ins.length/c.vagas*100;return '<div class="box"><h3>'+esc(c.nome)+'</h3><p>'+esc(c.dia)+' às '+esc(c.hora)+'</p><div class="meter"><i style="width:'+p+'%"></i></div><small>'+ins.length+' de '+c.vagas+' vagas ocupadas</small><div class="ac" style="margin-top:10px"><button class="btn s" onclick="reservar(\''+c.id+'\')">Reservar</button><button class="btn s g d" onclick="delAula(\''+c.id+'\')">Excluir</button></div></div>'}).join(''):'<p class="empty">Nenhuma aula cadastrada.</p>')+'</div>'
 };
 
 function formAula(){open('<h2>Nova aula</h2><label>Nome da aula</label><input id="an"><label>Dia da semana</label><select id="ad"><option>Seg</option><option>Ter</option><option>Qua</option><option>Qui</option><option>Sex</option><option>Sáb</option></select><label>Horário</label><input type="time" id="ah" value="18:00"><label>Vagas</label><input type="number" id="av" value="15" min="1"><div class="bar" style="margin-top:18px;justify-content:flex-end"><button class="btn g" onclick="dlg.close()">Cancelar</button><button class="btn" onclick="salvaAula()">Salvar aula</button></div>')}
@@ -481,9 +481,10 @@ function reservar(id){
 }
 
 function confReserva(id){
- var c=S.aulas.filter(function(x){return x.id===id})[0],a=$('ra').value;if(!a)return;
+ var c=S.aulas.filter(function(x){return x.id===id})[0],a=$('ra').value;if(!a||!alunoAtivo(aluno(a))){toast('Selecione um aluno ativo.');return}
  c.ins=c.ins||[];
- if(c.ins.length>=c.vagas){toast('Aula lotada');return}
+ var ocupadas=c.ins.filter(function(id){var x=aluno(id);return x&&alunoAtivo(x)}).length;
+ if(ocupadas>=c.vagas){toast('Aula lotada');return}
  c.ins.push(a);
  salvarTudo();dlg.close();toast('Reserva confirmada');go();
 }
@@ -572,7 +573,8 @@ function zapAcompanhamento(a,motivos){
 }
 
 function cobrar(id){
- var a=aluno(id),p=plano(a.plano);
+ var a=aluno(id);if(!a||!alunoAtivo(a)){toast('Aluno não encontrado ou desativado.');return}
+ var p=plano(a.plano);
  if(!S.cfg.pix||!S.cfg.cidade){open('<h2>Configure o Pix</h2><p>Para gerar cobranças, informe a chave Pix e a cidade da academia.</p><div class="bar" style="justify-content:flex-end"><button class="btn g" onclick="dlg.close()">Fechar</button><a class="btn" href="#config" onclick="dlg.close()">Abrir configurações</a></div>');return}
  var code=pixCode(p.preco,txid(a));
  open('<h2>Cobrança Pix</h2><p class="sub" style="margin-bottom:10px">'+esc(a.nome)+' · '+esc(p.nome)+' · <b>'+R(p.preco)+'</b></p><div class="qr">'+qrSvg(code)+'</div><label>Pix copia e cola</label><textarea id="pc" rows="3" readonly>'+code+'</textarea><div class="bar" style="margin:12px 0 0"><button class="btn" onclick="copiaPix()">Copiar código Pix</button><a class="btn wa" target="_blank" rel="noopener" href="'+zapLink(a)+'">Enviar por WhatsApp</a></div><div class="bar" style="margin:14px 0 0;justify-content:space-between"><button class="btn g" onclick="dlg.close()">Fechar</button><button class="btn g" onclick="dlg.close();receber(\''+id+'\')">Confirmar pagamento recebido</button></div>')
