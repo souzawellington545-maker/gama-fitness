@@ -420,34 +420,25 @@
     }
   }
 
+  window.gamaSecurityBackup = function () {
+    var button = document.getElementById("gama-security-backup");
+    if (button) downloadBackup(button);
+  };
+
+  window.gamaSecurityRestore = function () {
+    if (!ready || pending || sending) {
+      if (window.toast) toast("Aguarde a sincronização terminar antes de restaurar.");
+      return;
+    }
+    var input = document.getElementById("gama-restore-file");
+    if (input) input.click();
+  };
+
   function addLogout() {
     var main = document.querySelector("main");
-
     if (!main) return;
 
-    // Botão de backup
-    if (!document.getElementById("gama-backup")) {
-      var backup = document.createElement("button");
-
-      backup.id = "gama-backup";
-      backup.type = "button";
-      backup.textContent = "Backup";
-
-      backup.style.cssText =
-        "position:fixed;right:14px;top:12px;z-index:8;" +
-        "border:1px solid var(--ac);background:var(--ac);" +
-        "color:var(--acx);border-radius:8px;padding:7px 12px;" +
-        "font-weight:700;cursor:pointer";
-
-      backup.onclick = function () {
-        downloadBackup(backup);
-      };
-
-      document.body.appendChild(backup);
-    }
-
-    // Botão para restaurar um backup JSON, protegido pela sessão administrativa.
-    if (!document.getElementById("gama-restore")) {
+    if (!document.getElementById("gama-restore-file")) {
       var restoreInput = document.createElement("input");
       restoreInput.id = "gama-restore-file";
       restoreInput.type = "file";
@@ -455,58 +446,36 @@
       restoreInput.style.display = "none";
       document.body.appendChild(restoreInput);
 
-      var restore = document.createElement("button");
-      restore.id = "gama-restore";
-      restore.type = "button";
-      restore.textContent = "Restaurar";
-      restore.title = "Restaurar dados de um backup GAMA FITNESS";
-      restore.style.cssText =
-        "position:fixed;right:14px;top:96px;z-index:8;" +
-        "border:1px solid var(--wr);background:var(--sf);" +
-        "color:var(--ink);border-radius:8px;padding:7px 12px;" +
-        "font-weight:700;cursor:pointer";
-      restore.onclick = function () {
-        if (!ready || pending || sending) {
-          if (window.toast) toast("Aguarde a sincronização terminar antes de restaurar.");
-          return;
-        }
-        restoreInput.click();
-      };
+      var restoreAction = document.createElement("button");
+      restoreAction.id = "gama-restore-action";
+      restoreAction.type = "button";
+      restoreAction.textContent = "Restaurar backup";
+      restoreAction.style.display = "none";
+      document.body.appendChild(restoreAction);
       restoreInput.onchange = function () {
-        restoreBackup(restore, restoreInput);
+        if (restoreInput.files && restoreInput.files[0]) {
+          restoreBackup(restoreAction, restoreInput);
+        }
       };
-      document.body.appendChild(restore);
     }
 
-    // Botão de sair
     if (!document.getElementById("gama-logout")) {
       var b = document.createElement("button");
-
       b.id = "gama-logout";
       b.type = "button";
       b.textContent = "Sair";
-
       b.style.cssText =
-        "position:fixed;right:14px;top:54px;z-index:8;" +
+        "position:fixed;right:14px;top:12px;z-index:8;" +
         "border:1px solid var(--ln);background:var(--sf);" +
         "color:var(--ink);border-radius:8px;padding:7px 12px;" +
         "font-weight:600;cursor:pointer";
-
       b.onclick = function () {
-        api("action=logout", {
-          method: "POST",
-          body: "{}"
-        }).finally(function () {
+        api("action=logout", { method: "POST", body: "{}" }).finally(function () {
           ready = false;
-
-          var backup = document.getElementById("gama-backup");
-          if (backup) backup.remove();
-
           b.remove();
           showGate();
         });
       };
-
       document.body.appendChild(b);
     }
   }
