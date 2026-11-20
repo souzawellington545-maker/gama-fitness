@@ -326,7 +326,7 @@
       })
       .finally(function () {
         button.disabled = false;
-        button.textContent = "Backup";
+        button.textContent = button.dataset.defaultLabel || "Backup";
       });
   }
 
@@ -413,7 +413,7 @@
 
     function finish(message) {
       button.disabled = false;
-      button.textContent = "Restaurar";
+      button.textContent = button.dataset.defaultLabel || "Restaurar backup";
       input.value = "";
       if (message && window.toast) toast(message);
       else if (message) alert(message);
@@ -432,6 +432,43 @@
     }
     var input = document.getElementById("gama-restore-file");
     if (input) input.click();
+  };
+
+  window.gamaChangePassword = function () {
+    var current = document.getElementById("gama-current-password");
+    var next = document.getElementById("gama-new-password");
+    var confirmNext = document.getElementById("gama-confirm-password");
+    var button = document.getElementById("gama-change-password");
+    if (!current || !next || !confirmNext || !button) return;
+
+    if (!current.value || !next.value) {
+      toast("Informe a senha atual e a nova senha.");
+      return;
+    }
+    if (next.value.length < 10) {
+      toast("A nova senha deve ter pelo menos 10 caracteres.");
+      return;
+    }
+    if (next.value !== confirmNext.value) {
+      toast("A confirmação da nova senha não confere.");
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = "Alterando...";
+    api("action=password", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword: current.value, newPassword: next.value })
+    }).then(function () {
+      ready = false;
+      var logout = document.getElementById("gama-logout");
+      if (logout) logout.remove();
+      showGate("Senha alterada. Entre novamente com a nova senha.");
+    }).catch(function (error) {
+      toast("Não foi possível alterar: " + error.message);
+      button.disabled = false;
+      button.textContent = "Alterar senha";
+    });
   };
 
   function addLogout() {
