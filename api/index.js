@@ -19,21 +19,31 @@ function safeEqual(a, b) {
   return aa.length === bb.length && crypto.timingSafeEqual(aa, bb);
 }
 
+function hashPassword(password, salt) {
+  return crypto.scryptSync(String(password), salt, 64).toString("hex");
+}
+
+function verifyPassword(password, credential) {
+  if (!credential || !credential.salt || !credential.password_hash) return false;
+  return safeEqual(hashPassword(password, credential.salt), credential.password_hash);
+}
+
 function sign(value) {
   return crypto.createHmac("sha256", process.env.SESSION_SECRET)
     .update(value).digest("hex");
 }
 
-function makeSession() {
+function makeSession(sessionVersion) {
   const payload = Buffer.from(JSON.stringify({
     role: "owner",
+    sessionVersion: Number(sessionVersion),
     exp: Date.now() + SESSION_TTL * 1000
   })).toString("base64url");
 
   return payload + "." + sign(payload);
 }
 
-function validSession(req) {
+async function validSession(req) {
   try {
     const raw = (req.headers.cookie || "")
       .split(";")
@@ -53,7 +63,16 @@ function validSession(req) {
       Buffer.from(parts[0], "base64url").toString()
     );
 
-    return data.role === "owner" && data.exp > Date.now();
+    if (data.role !== "owner" || data.exp <= Date.now() ||
+        !Number.isSafeInteger(data.sessionVersion)) return false;
+
+    const credential = await pool.query(
+      "SELECT session_version FROM gama_owner_credentials WHERE id = $1",
+      ["owner"]
+    );
+
+    return credential.rowCount === 1 &&
+      Number(credential.rows[0].session_version) === data.sessionVersion;
   } catch (_) {
     return false;
   }
@@ -135,6 +154,16 @@ async function ensureTable() {
       blocked_until TIMESTAMPTZ
     )
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS gama_owner_credentials (
+      id TEXT PRIMARY KEY,
+      salt TEXT NOT NULL,
+      password_hash TEXT NOT NULL,
+      session_version INTEGER NOT NULL DEFAULT 1,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
 }
 
 module.exports = async function handler(req, res) {
@@ -183,7 +212,36 @@ module.exports = async function handler(req, res) {
         });
       }
 
-      if (!safeEqual(body.password || "", process.env.GAMA_ADMIN_PASSWORD)) {
+      let credentialResult = await pool.query(
+        "SELECT salt, password_hash, session_version FROM gama_owner_credentials WHERE id = $1",
+        ["owner"]
+      );
+      let credential = credentialResult.rows[0] || null;
+      let passwordOk = false;
+
+      if (credential) {
+        passwordOk = verifyPassword(body.password || "", credential);
+      } else {
+        if (!process.env.GAMA_ADMIN_PASSWORD || process.env.GAMA_ADMIN_PASSWORD.length < 10) {
+          return send(res, 500, { error: "A senha inicial do administrador não está configurada corretamente." });
+        }
+        passwordOk = safeEqual(body.password || "", process.env.GAMA_ADMIN_PASSWORD);
+        if (passwordOk) {
+          const salt = crypto.randomBytes(16).toString("hex");
+          await pool.query(
+            "INSERT INTO gama_owner_credentials (id, salt, password_hash, session_version) VALUES ($1, $2, $3, 1) ON CONFLICT (id) DO NOTHING",
+            ["owner", salt, hashPassword(body.password, salt)]
+          );
+          credentialResult = await pool.query(
+            "SELECT salt, password_hash, session_version FROM gama_owner_credentials WHERE id = $1",
+            ["owner"]
+          );
+          credential = credentialResult.rows[0] || null;
+          passwordOk = verifyPassword(body.password || "", credential);
+        }
+      }
+
+      if (!passwordOk || !credential) {
         const attempt = await pool.query(
           `INSERT INTO gama_login_limits
              (ip_hash, window_started_at, failed_attempts, blocked_until)
@@ -222,7 +280,7 @@ module.exports = async function handler(req, res) {
       }
 
       await pool.query("DELETE FROM gama_login_limits WHERE ip_hash = $1", [ipHash]);
-      res.setHeader("Set-Cookie", cookie(makeSession(), SESSION_TTL));
+      res.setHeader("Set-Cookie", cookie(makeSession(Number(credential.session_version)), SESSION_TTL));
       return send(res, 200, { ok: true });
     }
 
@@ -231,8 +289,39 @@ module.exports = async function handler(req, res) {
       return send(res, 200, { ok: true });
     }
 
-    if (!validSession(req)) {
+    if (!await validSession(req)) {
       return send(res, 401, { error: "Faça login para continuar." });
+    }
+
+    // ALTERAÇÃO DE SENHA: armazena somente hash com salt e invalida as sessões anteriores.
+    if (req.method === "POST" && action === "password") {
+      const body = await readBody(req);
+      const currentPassword = String(body.currentPassword || "");
+      const newPassword = String(body.newPassword || "");
+
+      if (newPassword.length < 10 || newPassword.length > 128) {
+        return send(res, 400, { error: "A nova senha deve ter entre 10 e 128 caracteres." });
+      }
+      if (newPassword === currentPassword) {
+        return send(res, 400, { error: "A nova senha precisa ser diferente da senha atual." });
+      }
+
+      const current = await pool.query(
+        "SELECT salt, password_hash, session_version FROM gama_owner_credentials WHERE id = $1",
+        ["owner"]
+      );
+      if (!current.rowCount || !verifyPassword(currentPassword, current.rows[0])) {
+        return send(res, 401, { error: "A senha atual está incorreta." });
+      }
+
+      const salt = crypto.randomBytes(16).toString("hex");
+      await pool.query(
+        "UPDATE gama_owner_credentials SET salt = $1, password_hash = $2, session_version = session_version + 1, updated_at = NOW() WHERE id = $3",
+        [salt, hashPassword(newPassword, salt), "owner"]
+      );
+
+      res.setHeader("Set-Cookie", cookie("", 0));
+      return send(res, 200, { ok: true, message: "Senha alterada. Entre novamente com a nova senha." });
     }
 
     // BACKUP: exportação protegida pela sessão administrativa.
