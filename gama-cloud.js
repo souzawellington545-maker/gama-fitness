@@ -330,6 +330,96 @@
       });
   }
 
+  function restoreBackup(button, input) {
+    if (!ready || button.disabled) return;
+    if (pending || sending) {
+      if (window.toast) toast("Aguarde a sincronização terminar antes de restaurar.");
+      return;
+    }
+
+    var file = input.files && input.files[0];
+    if (!file) return;
+    if (file.size > 1500000) {
+      if (window.toast) toast("Arquivo muito grande para restauração.");
+      input.value = "";
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = "Verificando...";
+    var reader = new FileReader();
+
+    reader.onload = function () {
+      var backup;
+      try {
+        backup = JSON.parse(String(reader.result || ""));
+      } catch (_) {
+        finish("Arquivo não é um JSON válido.");
+        return;
+      }
+
+      if (!backup || backup.format !== "gama-fitness-backup" ||
+          !backup.state || !validState(backup.state)) {
+        finish("Este arquivo não é um backup válido do GAMA FITNESS.");
+        return;
+      }
+
+      var state = backup.state;
+      var resumo = "Alunos: " + state.alunos.length +
+        "\nPlanos: " + state.planos.length +
+        "\nPagamentos: " + state.pagamentos.length +
+        "\nCheck-ins: " + state.checkins.length;
+
+      if (!confirm(
+        "ATENÇÃO: restaurar este backup substituirá os dados atuais da academia. " +
+        "Esta ação não pode ser desfeita pelo sistema.\n\n" +
+        "Arquivo: " + file.name + "\n" + resumo +
+        "\n\nConfirma a restauração?"
+      )) {
+        finish("");
+        return;
+      }
+
+      button.textContent = "Restaurando...";
+      api("action=restore", {
+        method: "POST",
+        body: JSON.stringify({
+          backup: backup,
+          expectedVersion: cloudVersion
+        })
+      }).then(function (data) {
+        if (!data.ok || !validState(data.state) || !Number.isSafeInteger(data.version)) {
+          throw new Error("O servidor não confirmou a restauração.");
+        }
+        applyState(data.state);
+        cloudVersion = data.version;
+        pending = false;
+        syncBlocked = false;
+        if (typeof go === "function") go();
+        if (window.toast) toast("Backup restaurado e sincronizado com sucesso!");
+      }).catch(function (error) {
+        console.error("GAMA restauração:", error);
+        if (window.toast) toast("Não foi possível restaurar: " + error.message);
+        else alert("Não foi possível restaurar: " + error.message);
+      }).finally(function () {
+        finish("");
+      });
+    };
+
+    reader.onerror = function () {
+      finish("Não foi possível ler o arquivo selecionado.");
+    };
+    reader.readAsText(file);
+
+    function finish(message) {
+      button.disabled = false;
+      button.textContent = "Restaurar";
+      input.value = "";
+      if (message && window.toast) toast(message);
+      else if (message) alert(message);
+    }
+  }
+
   function addLogout() {
     var main = document.querySelector("main");
 
@@ -354,6 +444,38 @@
       };
 
       document.body.appendChild(backup);
+    }
+
+    // Botão para restaurar um backup JSON, protegido pela sessão administrativa.
+    if (!document.getElementById("gama-restore")) {
+      var restoreInput = document.createElement("input");
+      restoreInput.id = "gama-restore-file";
+      restoreInput.type = "file";
+      restoreInput.accept = ".json,application/json";
+      restoreInput.style.display = "none";
+      document.body.appendChild(restoreInput);
+
+      var restore = document.createElement("button");
+      restore.id = "gama-restore";
+      restore.type = "button";
+      restore.textContent = "Restaurar";
+      restore.title = "Restaurar dados de um backup GAMA FITNESS";
+      restore.style.cssText =
+        "position:fixed;right:14px;top:96px;z-index:8;" +
+        "border:1px solid var(--wr);background:var(--sf);" +
+        "color:var(--ink);border-radius:8px;padding:7px 12px;" +
+        "font-weight:700;cursor:pointer";
+      restore.onclick = function () {
+        if (!ready || pending || sending) {
+          if (window.toast) toast("Aguarde a sincronização terminar antes de restaurar.");
+          return;
+        }
+        restoreInput.click();
+      };
+      restoreInput.onchange = function () {
+        restoreBackup(restore, restoreInput);
+      };
+      document.body.appendChild(restore);
     }
 
     // Botão de sair
