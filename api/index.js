@@ -269,6 +269,92 @@ module.exports = async function handler(req, res) {
     }
 
 
+    // RESTAURAÇÃO: importa somente backups GAMA válidos e usa controle otimista de versão.
+    if (req.method === "POST" && action === "restore") {
+      const body = await readBody(req);
+      const backup = body.backup;
+      const state = backup && backup.state;
+      const expected = body.expectedVersion;
+
+      if (!backup || backup.format !== "gama-fitness-backup" ||
+          !state || typeof state !== "object" || Array.isArray(state) ||
+          !Array.isArray(state.planos) || !Array.isArray(state.alunos) ||
+          !Array.isArray(state.checkins) || !Array.isArray(state.aulas) ||
+          !Array.isArray(state.pagamentos) ||
+          !state.cfg || typeof state.cfg !== "object" || Array.isArray(state.cfg)) {
+        return send(res, 400, { error: "Arquivo inválido ou incompatível com o GAMA FITNESS." });
+      }
+
+      if (!Number.isSafeInteger(expected) || expected < 1) {
+        return send(res, 400, { error: "Versão atual inválida. Atualize a página e tente novamente." });
+      }
+
+      const serialized = JSON.stringify(state);
+      if (serialized.length > 1_500_000) {
+        return send(res, 413, { error: "O backup excede o limite permitido." });
+      }
+
+      for (const p of state.pagamentos) {
+        const amount = Number(p && p.valor);
+        if (!p || !/^[a-zA-Z0-9_-]{6,100}$/.test(String(p.id || "")) ||
+            !String(p.aluno || "") || String(p.aluno).length > 100 ||
+            !Number.isFinite(amount) || amount <= 0 || amount > 1000000 ||
+            !/^\\d{4}-\\d{2}-\\d{2}$/.test(String(p.data || "")) ||
+            (p.periodoAte && !/^\\d{4}-\\d{2}-\\d{2}$/.test(String(p.periodoAte)))) {
+          return send(res, 400, { error: "O backup contém um pagamento inválido. Nenhum dado foi alterado." });
+        }
+      }
+
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const current = await client.query(
+          "SELECT version FROM gama_fitness_state WHERE id = $1 FOR UPDATE",
+          ["main"]
+        );
+        if (!current.rowCount || Number(current.rows[0].version) !== expected) {
+          await client.query("ROLLBACK");
+          return send(res, 409, { error: "Os dados online mudaram desde a última atualização. Atualize a página, gere um novo backup e tente novamente." });
+        }
+
+        const updated = await client.query(
+          `UPDATE gama_fitness_state
+           SET payload = $2::jsonb, updated_at = NOW(), version = version + 1
+           WHERE id = $1 AND version = $3
+           RETURNING version, updated_at`,
+          ["main", serialized, expected]
+        );
+        if (!updated.rowCount) {
+          await client.query("ROLLBACK");
+          return send(res, 409, { error: "Não foi possível confirmar a versão dos dados. Atualize a página e tente novamente." });
+        }
+
+        // Mantém o livro financeiro dedicado coerente com o histórico restaurado.
+        await client.query("DELETE FROM gama_fitness_payments");
+        for (const p of state.pagamentos) {
+          await client.query(
+            `INSERT INTO gama_fitness_payments
+              (payment_id, student_id, amount, paid_at, period_end)
+             VALUES ($1, $2, $3, $4::date, $5::date)`,
+            [String(p.id), String(p.aluno), Number(Number(p.valor).toFixed(2)), String(p.data), p.periodoAte || null]
+          );
+        }
+
+        await client.query("COMMIT");
+        return send(res, 200, {
+          ok: true,
+          state,
+          version: Number(updated.rows[0].version),
+          updatedAt: updated.rows[0].updated_at
+        });
+      } catch (error) {
+        await client.query("ROLLBACK").catch(() => {});
+        throw error;
+      } finally {
+        client.release();
+      }
+    }
+
     // RECEBIMENTO: registra o pagamento e atualiza o estado na mesma transação.
     if (req.method === "POST" && action === "payment") {
       const body = await readBody(req);
