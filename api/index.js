@@ -181,13 +181,6 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    if (!process.env.GAMA_ADMIN_PASSWORD ||
-        process.env.GAMA_ADMIN_PASSWORD.length < 10) {
-      return send(res, 500, {
-        error: "Configure GAMA_ADMIN_PASSWORD com pelo menos 10 caracteres."
-      });
-    }
-
     await ensureTable();
 
     const action = String(req.query.action || "");
