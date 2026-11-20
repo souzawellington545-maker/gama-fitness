@@ -150,7 +150,10 @@ label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
 .meter{height:6px;background:var(--bg);border-radius:9px;overflow:hidden;margin-bottom:10px}
 .meter i{display:block;height:100%;background:var(--ac)}
 .empty{color:var(--mut);padding:18px;text-align:center}
-.ac{display:flex;gap:6px}
+.ac{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.student-actions{min-width:260px}
+.student-actions .btn{white-space:nowrap}
+@media(max-width:820px){.student-actions{min-width:250px}.student-actions .btn{min-height:34px}}
 #toast{
   position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));
   left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);
@@ -264,6 +267,7 @@ var STL={pago:'Pago',ok:'Em dia',vence:'Vence em breve',atrasado:'Inadimplente'}
 function tag(a){var s=st(a),classe=s==='pago'?'ok':s;return '<span class="tag '+classe+'">'+STL[s]+'</span>'}
 var plano=function(id){return S.planos.filter(function(p){return p.id===id})[0]||{nome:'–',preco:0,meses:1}};
 var aluno=function(id){return S.alunos.filter(function(a){return a.id===id})[0]};
+var alunoAtivo=function(a){return !!a&&a.ativo!==false};
 var $=function(i){return document.getElementById(i)};
 var dlg=$('dlg');
 function open(html){dlg.innerHTML=html;dlg.showModal()}
@@ -285,9 +289,9 @@ V.painel=function(){
  dias=[0,1,2,3,4,5,6].map(function(i){var d=addD(h,i-6);return{d:d,n:S.checkins.filter(function(c){return c.dia===d}).length}}),
  mxCheck=Math.max.apply(null,dias.map(function(x){return x.n}).concat([1])),
  sem=['dom','seg','ter','qua','qui','sex','sáb'],
- at=S.alunos.filter(function(a){return st(a)!=='atrasado'}).length,
- inad=S.alunos.filter(function(a){return st(a)==='atrasado'}).length,
- breve=S.alunos.filter(function(a){return st(a)==='vence'}).length,
+ at=S.alunos.filter(function(a){return alunoAtivo(a)&&st(a)!=='atrasado'}).length,
+ inad=S.alunos.filter(function(a){return alunoAtivo(a)&&st(a)==='atrasado'}).length,
+ breve=S.alunos.filter(function(a){return alunoAtivo(a)&&st(a)==='vence'}).length,
  rec=S.pagamentos.filter(function(p){return p.data && p.data.slice(0,7)===mes}).reduce(function(s,p){return s+(Number(p.valor)||0)},0),
  hj=S.checkins.filter(function(c){return c.dia===h}).length,
  meses=[0,1,2,3,4,5].map(function(i){
@@ -296,7 +300,7 @@ V.painel=function(){
    return {chave:chave,nome:d.toLocaleDateString('pt-BR',{month:'short'}).replace('.',''),n:S.pagamentos.filter(function(p){return p.data && p.data.slice(0,7)===chave}).reduce(function(t,p){return t+(Number(p.valor)||0)},0)};
  }).reverse(),
  mx=Math.max.apply(null,meses.map(function(x){return x.n}).concat([1])),
- alertas=S.alunos.map(function(a){
+ alertas=S.alunos.filter(alunoAtivo).map(function(a){
    var situacao=st(a),historico=S.checkins.filter(function(c){return c.aluno===a.id}).sort(function(x,y){return x.dia<y.dia?1:(x.dia>y.dia?-1:0)}),
    ultimo=historico[0],diasSem=ultimo?Math.floor((new Date(h+'T12:00:00')-new Date(ultimo.dia+'T12:00:00'))/86400000):null,
    motivos=[];
@@ -309,7 +313,7 @@ V.painel=function(){
  return '<h1>Painel</h1><p class="sub">Resumo de hoje, '+fd(h)+'</p>'+
  '<div class="dash-actions"><a class="btn" href="#alunos">+ Novo aluno / Alunos</a><a class="btn g" href="#checkin">Registrar check-in</a><a class="btn g" href="#financeiro">Ver financeiro</a></div>'+
  '<div class="grid"><div class="box kpi"><small>Alunos sem mensalidade vencida</small><strong>'+at+'</strong></div><div class="box kpi"><small>Receita recebida no mês</small><strong>'+R(rec)+'</strong></div><div class="box kpi"><small>Mensalidades vencidas</small><strong>'+inad+'</strong></div><div class="box kpi"><small>Check-ins hoje</small><strong>'+hj+'</strong></div></div>'+
- '<div class="grid"><div class="box kpi"><small>Vencem nos próximos 5 dias</small><strong>'+breve+'</strong></div><div class="box kpi"><small>Total de alunos cadastrados</small><strong>'+S.alunos.length+'</strong></div></div>'+
+ '<div class="grid"><div class="box kpi"><small>Vencem nos próximos 5 dias</small><strong>'+breve+'</strong></div><div class="box kpi"><small>Alunos ativos</small><strong>'+S.alunos.filter(alunoAtivo).length+'</strong></div></div>'+
  '<div class="box dash-section"><h2>Receita dos últimos 6 meses</h2><div class="bars">'+meses.map(function(x){return '<div><span>'+R(x.n)+'</span><i style="height:'+(x.n/mx*100)+'%"></i>'+esc(x.nome)+'</div>'}).join('')+'</div><p class="dash-note">Valores calculados a partir dos pagamentos registrados no sistema.</p></div>'+
  '<div class="box dash-section"><h2>Frequência dos últimos 7 dias</h2><div class="bars">'+dias.map(function(x){return '<div><span>'+x.n+'</span><i style="height:'+(x.n/mxCheck*100)+'%"></i>'+sem[new Date(x.d+'T12:00:00').getDay()]+'</div>'}).join('')+'</div></div>'+
  '<div class="box dash-section"><h2>Acompanhamento de alunos</h2><p class="dash-note">Alunos que precisam de atenção: mensalidade atrasada ou próxima do vencimento, ou ausência de check-in por 7 dias ou mais.</p>'+
@@ -317,12 +321,12 @@ V.painel=function(){
 };
 
 V.alunos=function(){
- return '<h1>Alunos</h1><p class="sub">Cadastro, planos e situação das mensalidades.</p><div class="bar"><input id="q" placeholder="Buscar por nome ou telefone" oninput="listaAlunos()"><select id="filtroSituacao" class="filter-select" onchange="listaAlunos()"><option value="todos">Todas as situações</option><option value="pago">Pago</option><option value="ok">Em dia</option><option value="vence">Vencem em breve</option><option value="atrasado">Inadimplentes</option></select><button class="btn" onclick="formAluno()">Novo aluno</button></div><div class="box tw" id="tb"></div>'
+ return '<h1>Alunos</h1><p class="sub">Cadastro, planos e situação das mensalidades.</p><div class="bar"><input id="q" placeholder="Buscar por nome ou telefone" oninput="listaAlunos()"><select id="filtroSituacao" class="filter-select" onchange="listaAlunos()"><option value="ativos" selected>Alunos ativos</option><option value="inativos">Desativados</option><option value="todos">Todos os alunos</option><option value="pago">Pago</option><option value="ok">Em dia</option><option value="vence">Vencem em breve</option><option value="atrasado">Inadimplentes</option></select><button class="btn" onclick="formAluno()">Novo aluno</button></div><div class="box tw" id="tb"></div>'
 };
 function listaAlunos(){
- var q=($('q')||{value:''}).value.toLowerCase(),f=($('filtroSituacao')||{value:'todos'}).value,
- l=S.alunos.filter(function(a){return (a.nome+(a.tel||'')).toLowerCase().indexOf(q)>-1&&(f==='todos'||st(a)===f)});
- $('tb').innerHTML=l.length?'<table><tr><th>Nome</th><th>Telefone</th><th>Plano</th><th>Vencimento</th><th>Situação</th><th></th></tr>'+l.map(function(a){return '<tr><td>'+esc(a.nome)+'</td><td>'+esc(a.tel)+'</td><td>'+esc(plano(a.plano).nome)+'</td><td>'+fd(a.venc)+'</td><td>'+tag(a)+'</td><td class="ac"><button class="btn s" onclick="cobrar(\''+a.id+'\')">Cobrar Pix</button><button class="btn s g" onclick="if(confirm(\'Confirmar recebimento da mensalidade?\'))receber(\''+a.id+'\')">Receber</button><a class="btn s wa" target="_blank" rel="noopener" href="'+zapLink(a)+'">WhatsApp</a><button class="btn s g" onclick="formAluno(\''+a.id+'\')">Editar</button><button class="btn s g d" onclick="delAluno(\''+a.id+'\')">Excluir</button></td></tr>'}).join('')+'</table>':'<p class="empty">Nenhum aluno encontrado com esses filtros.</p>'
+ var q=($('q')||{value:''}).value.toLowerCase(),f=($('filtroSituacao')||{value:'ativos'}).value,
+ l=S.alunos.filter(function(a){var corresponde=f==='todos'||(f==='ativos'&&alunoAtivo(a))||(f==='inativos'&&!alunoAtivo(a))||(['pago','ok','vence','atrasado'].indexOf(f)>-1&&alunoAtivo(a)&&st(a)===f);return corresponde&&(a.nome+(a.tel||'')).toLowerCase().indexOf(q)>-1});
+ $('tb').innerHTML=l.length?'<table><tr><th>Nome</th><th>Telefone</th><th>Plano</th><th>Vencimento</th><th>Situação</th><th>Ações</th></tr>'+l.map(function(a){var status=alunoAtivo(a)?tag(a):'<span class="tag">Desativado</span>';var acoes=alunoAtivo(a)?'<button class="btn s" onclick="cobrar(\''+a.id+'\')">Cobrar Pix</button><button class="btn s g" onclick="if(confirm(\'Confirmar recebimento da mensalidade?\'))receber(\''+a.id+'\')">Receber</button><a class="btn s wa" target="_blank" rel="noopener" href="'+zapLink(a)+'">WhatsApp</a><button class="btn s g" onclick="formAluno(\''+a.id+'\')">Editar</button>':'<span class="dash-note">Aluno desativado</span>';return '<tr><td>'+esc(a.nome)+'</td><td>'+esc(a.tel)+'</td><td>'+esc(plano(a.plano).nome)+'</td><td>'+fd(a.venc)+'</td><td>'+status+'</td><td class="ac student-actions">'+acoes+'<button class="btn s g" aria-label="Mais opções para '+esc(a.nome)+'" onclick="opcoesAluno(\''+a.id+'\')">⋮ Mais opções</button></td></tr>'}).join('')+'</table>':'<p class="empty">Nenhum aluno encontrado com esses filtros.</p>'
 }
 
 function formAluno(id){
@@ -343,18 +347,40 @@ function salvaAluno(id){
  salvarTudo();dlg.close();toast('Aluno salvo');go();
 }
 
+function opcoesAluno(id){
+ var a=aluno(id);if(!a)return;
+ var ativo=alunoAtivo(a);
+ open('<h2>Mais opções · '+esc(a.nome)+'</h2><p class="sub">Gerencie a situação deste aluno sem perder o histórico.</p>'+
+ (ativo?'<div class="box" style="margin:12px 0"><b>Desativar aluno</b><p class="dash-note">O aluno sai das listas de check-in, reservas e cobranças. Pagamentos, check-ins, aulas e ficha de treino permanecem guardados.</p><button class="btn g" onclick="desativarAluno(\''+id+'\')">Desativar aluno</button></div>':'<div class="box" style="margin:12px 0"><b>Aluno desativado</b><p class="dash-note">O histórico está preservado. Reative para voltar a usar check-in, reservas e cobranças.</p><button class="btn" onclick="reativarAluno(\''+id+'\')">Reativar aluno</button></div>')+
+ '<div style="border-top:1px solid var(--ln);padding-top:14px;margin-top:16px"><b style="color:var(--er)">Zona de exclusão</b><p class="dash-note">A exclusão definitiva apaga o cadastro e os registros vinculados. Prefira desativar para preservar o histórico.</p><button class="btn s g d" onclick="confirmarExclusaoAluno(\''+id+'\')">Excluir definitivamente…</button></div><div class="bar" style="margin-top:18px;justify-content:flex-end"><button class="btn g" onclick="dlg.close()">Fechar</button></div>');
+}
+function desativarAluno(id){
+ var a=aluno(id);if(!a)return;
+ if(!confirm('Desativar '+a.nome+'? O histórico será preservado.'))return;
+ a.ativo=false;salvarTudo();dlg.close();toast('Aluno desativado. Histórico preservado.');go();
+}
+function reativarAluno(id){
+ var a=aluno(id);if(!a)return;
+ a.ativo=true;salvarTudo();dlg.close();toast('Aluno reativado.');go();
+}
+function confirmarExclusaoAluno(id){
+ var a=aluno(id);if(!a)return;
+ open('<h2 style="color:var(--er)">Excluir definitivamente</h2><p>Esta ação apaga o cadastro de <b>'+esc(a.nome)+'</b> e remove seus pagamentos, check-ins e reservas. Não poderá ser desfeita pelo sistema.</p><p class="dash-note">Para confirmar, digite exatamente o nome do aluno:</p><input id="confirmar-exclusao-aluno" autocomplete="off" placeholder="'+esc(a.nome)+'"><div class="bar" style="margin-top:18px;justify-content:flex-end"><button class="btn g" onclick="opcoesAluno(\''+id+'\')">Voltar</button><button class="btn g d" onclick="delAluno(\''+id+'\')">Excluir permanentemente</button></div>');
+}
 function delAluno(id){
- if(!confirm('Excluir este aluno e seu histórico?'))return;
- S.alunos=S.alunos.filter(function(a){return a.id!==id});
+ var a=aluno(id);if(!a)return;
+ var digitado=($('confirmar-exclusao-aluno')||{value:''}).value.trim();
+ if(digitado.toLocaleLowerCase('pt-BR')!==String(a.nome).trim().toLocaleLowerCase('pt-BR')){toast('Nome não confere. Exclusão cancelada.');return}
+ S.alunos=S.alunos.filter(function(x){return x.id!==id});
  S.checkins=S.checkins.filter(function(c){return c.aluno!==id});
  S.pagamentos=S.pagamentos.filter(function(c){return c.aluno!==id});
  S.aulas.forEach(function(c){c.ins=(c.ins||[]).filter(function(x){return x!==id})});
- salvarTudo();toast('Aluno excluído');go();
+ salvarTudo();dlg.close();toast('Aluno excluído definitivamente');go();
 }
 
 function receber(id){
  var a=aluno(id);
- if(!a){toast('Aluno não encontrado');return}
+ if(!a||!alunoAtivo(a)){toast('Aluno não encontrado ou desativado.');return}
  var p=plano(a.plano),base=a.venc>hoje()?a.venc:hoje();
  var novoVenc=addM(base,p.meses);
  var novoPg={id:uid(),aluno:id,valor:p.preco,data:hoje(),periodoAte:novoVenc};
@@ -379,7 +405,7 @@ V.checkin=function(){
 
 function listaCheckinHtml(q){
  q=String(q||'').trim().toLocaleLowerCase('pt-BR');
- var h=hoje(),lista=S.alunos.filter(function(a){return String(a.nome||'').toLocaleLowerCase('pt-BR').indexOf(q)>-1});
+ var h=hoje(),lista=S.alunos.filter(function(a){return alunoAtivo(a)&&String(a.nome||'').toLocaleLowerCase('pt-BR').indexOf(q)>-1});
  if(!lista.length)return '<p class="empty">Nenhum aluno encontrado.</p>';
  return lista.sort(function(a,b){return String(a.nome).localeCompare(String(b.nome),'pt-BR')}).map(function(a){
    var fez=S.checkins.some(function(c){return c.aluno===a.id&&c.dia===h}),bloq=st(a)==='atrasado';
@@ -394,7 +420,7 @@ function filtrarCheckin(){
 
 function registrarCheckinAluno(id){
  var a=aluno(id),r=$('rs'),h=hoje();
- if(!a){toast('Aluno não encontrado');return}
+ if(!a||!alunoAtivo(a)){toast('Aluno não encontrado ou desativado.');return}
  if(S.checkins.some(function(c){return c.aluno===id&&c.dia===h})){
    r.innerHTML='<div class="res ok"><big>Check-in já registrado</big>'+esc(a.nome)+' já teve a entrada registrada hoje.</div>';return;
  }
@@ -431,7 +457,7 @@ function desfazerCheckin(id){
 }
 
 V.aulas=function(){
- return '<h1>Aulas</h1><p class="sub">Grade semanal e reservas de vagas.</p><div class="bar"><button class="btn" onclick="formAula()">Nova aula</button></div><div class="cls">'+(S.aulas.length?S.aulas.map(function(c){var ins=c.ins||[];var p=ins.length/c.vagas*100;return '<div class="box"><h3>'+esc(c.nome)+'</h3><p>'+esc(c.dia)+' às '+esc(c.hora)+'</p><div class="meter"><i style="width:'+p+'%"></i></div><small>'+ins.length+' de '+c.vagas+' vagas ocupadas</small><div class="ac" style="margin-top:10px"><button class="btn s" onclick="reservar(\''+c.id+'\')">Reservar</button><button class="btn s g d" onclick="delAula(\''+c.id+'\')">Excluir</button></div></div>'}).join(''):'<p class="empty">Nenhuma aula cadastrada.</p>')+'</div>'
+ return '<h1>Aulas</h1><p class="sub">Grade semanal e reservas de vagas.</p><div class="bar"><button class="btn" onclick="formAula()">Nova aula</button></div><div class="cls">'+(S.aulas.length?S.aulas.map(function(c){var ins=(c.ins||[]).filter(function(id){var a=aluno(id);return a&&alunoAtivo(a)});var p=ins.length/c.vagas*100;return '<div class="box"><h3>'+esc(c.nome)+'</h3><p>'+esc(c.dia)+' às '+esc(c.hora)+'</p><div class="meter"><i style="width:'+p+'%"></i></div><small>'+ins.length+' de '+c.vagas+' vagas ocupadas</small><div class="ac" style="margin-top:10px"><button class="btn s" onclick="reservar(\''+c.id+'\')">Reservar</button><button class="btn s g d" onclick="delAula(\''+c.id+'\')">Excluir</button></div></div>'}).join(''):'<p class="empty">Nenhuma aula cadastrada.</p>')+'</div>'
 };
 
 function formAula(){open('<h2>Nova aula</h2><label>Nome da aula</label><input id="an"><label>Dia da semana</label><select id="ad"><option>Seg</option><option>Ter</option><option>Qua</option><option>Qui</option><option>Sex</option><option>Sáb</option></select><label>Horário</label><input type="time" id="ah" value="18:00"><label>Vagas</label><input type="number" id="av" value="15" min="1"><div class="bar" style="margin-top:18px;justify-content:flex-end"><button class="btn g" onclick="dlg.close()">Cancelar</button><button class="btn" onclick="salvaAula()">Salvar aula</button></div>')}
@@ -451,22 +477,24 @@ function delAula(id){
 function reservar(id){
  var c=S.aulas.filter(function(x){return x.id===id})[0];
  var ins=c.ins||[];
- open('<h2>Reservar em '+esc(c.nome)+'</h2><label>Aluno</label><select id="ra">'+S.alunos.filter(function(a){return ins.indexOf(a.id)<0}).map(function(a){return '<option value="'+a.id+'">'+esc(a.nome)+'</option>'}).join('')+'</select><div class="bar" style="margin-top:18px;justify-content:flex-end"><button class="btn g" onclick="dlg.close()">Cancelar</button><button class="btn" onclick="confReserva(\''+id+'\')">Confirmar reserva</button></div>')
+ open('<h2>Reservar em '+esc(c.nome)+'</h2><label>Aluno</label><select id="ra">'+S.alunos.filter(function(a){return alunoAtivo(a)&&ins.indexOf(a.id)<0}).map(function(a){return '<option value="'+a.id+'">'+esc(a.nome)+'</option>'}).join('')+'</select><div class="bar" style="margin-top:18px;justify-content:flex-end"><button class="btn g" onclick="dlg.close()">Cancelar</button><button class="btn" onclick="confReserva(\''+id+'\')">Confirmar reserva</button></div>')
 }
 
 function confReserva(id){
- var c=S.aulas.filter(function(x){return x.id===id})[0],a=$('ra').value;if(!a)return;
+ var c=S.aulas.filter(function(x){return x.id===id})[0],a=$('ra').value;if(!a||!alunoAtivo(aluno(a))){toast('Selecione um aluno ativo.');return}
  c.ins=c.ins||[];
- if(c.ins.length>=c.vagas){toast('Aula lotada');return}
+ var ocupadas=c.ins.filter(function(id){var x=aluno(id);return x&&alunoAtivo(x)}).length;
+ if(ocupadas>=c.vagas){toast('Aula lotada');return}
  c.ins.push(a);
  salvarTudo();dlg.close();toast('Reserva confirmada');go();
 }
 
 var TA=null;
 V.treinos=function(){
- if(!TA||!aluno(TA))TA=S.alunos[0]&&S.alunos[0].id;
+ var ativos=S.alunos.filter(alunoAtivo);
+ if(!TA||!aluno(TA)||!alunoAtivo(aluno(TA)))TA=ativos[0]&&ativos[0].id;
  var a=aluno(TA);
- return '<h1>Treinos</h1><p class="sub">Monte a ficha de exercícios de cada aluno.</p>'+(a?'<div class="bar"><select id="ta" onchange="TA=this.value;go()">'+S.alunos.map(function(x){return '<option value="'+x.id+'"'+(x.id===TA?' selected':'')+'>'+esc(x.nome)+'</option>'}).join('')+'</select></div><div class="box tw">'+(a.treino&&a.treino.length?'<table><tr><th>Exercício</th><th>Séries x repetições</th><th></th></tr>'+a.treino.map(function(t,i){return '<tr><td>'+esc(t.ex)+'</td><td>'+esc(t.sr)+'</td><td><button class="btn s g d" onclick="delEx('+i+')">Remover</button></td></tr>'}).join('')+'</table>':'<p class="empty">Esta ficha está vazia. Adicione o primeiro exercício abaixo.</p>')+'</div><div class="bar" style="margin-top:14px"><input id="ex" placeholder="Exercício (ex.: Leg press)"><input id="sr" placeholder="Séries x reps (ex.: 3x12)" style="max-width:200px"><button class="btn" onclick="addEx()">Adicionar exercício</button></div>':'<p class="empty">Cadastre um aluno para montar uma ficha.</p>')
+ return '<h1>Treinos</h1><p class="sub">Monte a ficha de exercícios de cada aluno.</p>'+(a?'<div class="bar"><select id="ta" onchange="TA=this.value;go()">'+ativos.map(function(x){return '<option value="'+x.id+'"'+(x.id===TA?' selected':'')+'>'+esc(x.nome)+'</option>'}).join('')+'</select></div><div class="box tw">'+(a.treino&&a.treino.length?'<table><tr><th>Exercício</th><th>Séries x repetições</th><th></th></tr>'+a.treino.map(function(t,i){return '<tr><td>'+esc(t.ex)+'</td><td>'+esc(t.sr)+'</td><td><button class="btn s g d" onclick="delEx('+i+')">Remover</button></td></tr>'}).join('')+'</table>':'<p class="empty">Esta ficha está vazia. Adicione o primeiro exercício abaixo.</p>')+'</div><div class="bar" style="margin-top:14px"><input id="ex" placeholder="Exercício (ex.: Leg press)"><input id="sr" placeholder="Séries x reps (ex.: 3x12)" style="max-width:200px"><button class="btn" onclick="addEx()">Adicionar exercício</button></div>':'<p class="empty">Cadastre um aluno para montar uma ficha.</p>')
 };
 
 function addEx(){
@@ -488,7 +516,7 @@ V.financeiro=function(){
  diaTotal=hojePag.reduce(function(s,p){return s+(Number(p.valor)||0)},0),
  mesPag=S.pagamentos.filter(function(p){return p.data && p.data.slice(0,7)===mes}),
  mesTotal=mesPag.reduce(function(s,p){return s+(Number(p.valor)||0)},0),
- aberto=S.alunos.filter(function(a){return st(a)==='atrasado'}).reduce(function(s,a){return s+plano(a.plano).preco},0),
+ aberto=S.alunos.filter(function(a){return alunoAtivo(a)&&st(a)==='atrasado'}).reduce(function(s,a){return s+plano(a.plano).preco},0),
  tot=S.pagamentos.reduce(function(s,p){return s+(Number(p.valor)||0)},0),
  l=S.pagamentos.slice().sort(function(a,b){return String(b.data||'').localeCompare(String(a.data||''))});
  var linhasHoje=hojePag.slice().reverse().map(function(p){var a=aluno(p.aluno);return '<tr><td>'+esc(a?a.nome:'Removido')+'</td><td>'+R(p.valor)+'</td></tr>'}).join('');
@@ -502,7 +530,7 @@ V.financeiro=function(){
 };
 
 V.planos=function(){
- return '<h1>Planos</h1><p class="sub">Valores e duração das mensalidades.</p><div class="bar"><button class="btn" onclick="formPlano()">Novo plano</button></div><div class="grid">'+S.planos.map(function(p){var n=S.alunos.filter(function(a){return a.plano===p.id}).length;return '<div class="box kpi"><small>'+esc(p.nome)+' · '+p.meses+(p.meses>1?' meses':' mês')+'</small><strong>'+R(p.preco)+'</strong><p class="sub" style="margin:6px 0 10px">'+n+(n===1?' aluno':' alunos')+'</p><button class="btn s g d" onclick="delPlano(\''+p.id+'\')">Excluir</button></div>'}).join('')+'</div>'
+ return '<h1>Planos</h1><p class="sub">Valores e duração das mensalidades.</p><div class="bar"><button class="btn" onclick="formPlano()">Novo plano</button></div><div class="grid">'+S.planos.map(function(p){var n=S.alunos.filter(function(a){return alunoAtivo(a)&&a.plano===p.id}).length;return '<div class="box kpi"><small>'+esc(p.nome)+' · '+p.meses+(p.meses>1?' meses':' mês')+'</small><strong>'+R(p.preco)+'</strong><p class="sub" style="margin:6px 0 10px">'+n+(n===1?' aluno':' alunos')+'</p><button class="btn s g d" onclick="delPlano(\''+p.id+'\')">Excluir</button></div>'}).join('')+'</div>'
 };
 
 function formPlano(){open('<h2>Novo plano</h2><label>Nome</label><input id="pn"><label>Preço (R$)</label><input type="number" id="pp" step="0.01" min="0"><label>Duração em meses</label><input type="number" id="pm" value="1" min="1"><div class="bar" style="margin-top:18px;justify-content:flex-end"><button class="btn g" onclick="dlg.close()">Cancelar</button><button class="btn" onclick="salvaPlano()">Salvar plano</button></div>')}
@@ -545,7 +573,8 @@ function zapAcompanhamento(a,motivos){
 }
 
 function cobrar(id){
- var a=aluno(id),p=plano(a.plano);
+ var a=aluno(id);if(!a||!alunoAtivo(a)){toast('Aluno não encontrado ou desativado.');return}
+ var p=plano(a.plano);
  if(!S.cfg.pix||!S.cfg.cidade){open('<h2>Configure o Pix</h2><p>Para gerar cobranças, informe a chave Pix e a cidade da academia.</p><div class="bar" style="justify-content:flex-end"><button class="btn g" onclick="dlg.close()">Fechar</button><a class="btn" href="#config" onclick="dlg.close()">Abrir configurações</a></div>');return}
  var code=pixCode(p.preco,txid(a));
  open('<h2>Cobrança Pix</h2><p class="sub" style="margin-bottom:10px">'+esc(a.nome)+' · '+esc(p.nome)+' · <b>'+R(p.preco)+'</b></p><div class="qr">'+qrSvg(code)+'</div><label>Pix copia e cola</label><textarea id="pc" rows="3" readonly>'+code+'</textarea><div class="bar" style="margin:12px 0 0"><button class="btn" onclick="copiaPix()">Copiar código Pix</button><a class="btn wa" target="_blank" rel="noopener" href="'+zapLink(a)+'">Enviar por WhatsApp</a></div><div class="bar" style="margin:14px 0 0;justify-content:space-between"><button class="btn g" onclick="dlg.close()">Fechar</button><button class="btn g" onclick="dlg.close();receber(\''+id+'\')">Confirmar pagamento recebido</button></div>')
