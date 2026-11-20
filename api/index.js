@@ -381,8 +381,8 @@ module.exports = async function handler(req, res) {
         if (!p || !/^[a-zA-Z0-9_-]{6,100}$/.test(String(p.id || "")) ||
             !String(p.aluno || "") || String(p.aluno).length > 100 ||
             !Number.isFinite(amount) || amount <= 0 || amount > 1000000 ||
-            !/^\\d{4}-\\d{2}-\\d{2}$/.test(String(p.data || "")) ||
-            (p.periodoAte && !/^\\d{4}-\\d{2}-\\d{2}$/.test(String(p.periodoAte)))) {
+            !/\d{4}-\d{2}-\d{2}$/.test(String(p.data || "")) ||
+            (p.periodoAte && !/^\d{4}-\d{2}-\d{2}$/.test(String(p.periodoAte)))) {
           return send(res, 400, { error: "O backup contém um pagamento inválido. Nenhum dado foi alterado." });
         }
       }
