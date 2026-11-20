@@ -420,7 +420,7 @@ function filtrarCheckin(){
 
 function registrarCheckinAluno(id){
  var a=aluno(id),r=$('rs'),h=hoje();
- if(!a){toast('Aluno não encontrado');return}
+ if(!a||!alunoAtivo(a)){toast('Aluno não encontrado ou desativado.');return}
  if(S.checkins.some(function(c){return c.aluno===id&&c.dia===h})){
    r.innerHTML='<div class="res ok"><big>Check-in já registrado</big>'+esc(a.nome)+' já teve a entrada registrada hoje.</div>';return;
  }
